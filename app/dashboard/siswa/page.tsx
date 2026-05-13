@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Sidebar from "./components/sidebar";
 import DashboardContent from "./components/dashboardContent";
+import PageTransition from "./components/PageTransition";
 
 export default function DashboardSiswaPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -19,10 +20,9 @@ export default function DashboardSiswaPage() {
 
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      {/* Main area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <PageTransition>
         <DashboardContent onMenuClick={() => setSidebarOpen(true)} />
-      </div>
+      </PageTransition>
     </div>
   );
 }

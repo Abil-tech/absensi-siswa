@@ -3,6 +3,8 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { signOut } from "next-auth/react";
+import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 
 interface SidebarProps {
   open: boolean;
@@ -42,8 +44,15 @@ const navItems = [
 
 export default function Sidebar({ open, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const [isMobile, setIsMobile] = useState(false);
 
-  // exact match untuk dashboard, startsWith untuk sub-halaman profil
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
   function isActive(href: string) {
     if (href === "/dashboard/siswa") return pathname === "/dashboard/siswa";
     return pathname.startsWith(href);
@@ -62,30 +71,17 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
       <div className="px-6 pt-8 pb-6 border-b border-white/10">
         <div className="flex items-center gap-2.5">
           <svg width="26" height="26" viewBox="0 0 28 28" fill="none" aria-hidden>
-            <path
-              d="M14 4L2 10L14 16L26 10L14 4Z"
-              fill="#7fe05b"
-              stroke="#7fe05b"
-              strokeWidth="1.5"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M6 13V19C6 19 9 22 14 22C19 22 22 19 22 19V13"
-              stroke="#7fe05b"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
+            <path d="M14 4L2 10L14 16L26 10L14 4Z" fill="#7fe05b" stroke="#7fe05b" strokeWidth="1.5" strokeLinejoin="round" />
+            <path d="M6 13V19C6 19 9 22 14 22C19 22 22 19 22 19V13" stroke="#7fe05b" strokeWidth="2" strokeLinecap="round" />
           </svg>
           <div>
-            <p className="text-white font-extrabold text-[15px] leading-tight tracking-tight">
-              Academic Portal
-            </p>
+            <p className="text-white font-extrabold text-[15px] leading-tight tracking-tight">Academic Portal</p>
             <p className="text-white/40 text-[11px] font-medium mt-0.5">Disciplined Innovation</p>
           </div>
         </div>
       </div>
 
-      {/* ── Nav Items ── */}
+      {/* ── Nav ── */}
       <nav className="flex-1 px-3 py-6 flex flex-col gap-1">
         {navItems.map((item) => {
           const active = isActive(item.href);
@@ -94,30 +90,46 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
               key={item.href}
               href={item.href}
               onClick={onClose}
-              className={`
-                flex items-center gap-3 px-4 py-3 rounded-xl
-                text-[14px] font-semibold
-                transition-all duration-150 group
-                ${
-                  active
-                    ? "bg-[#7fe05b] text-[#111410]"
-                    : "text-white/50 hover:text-white hover:bg-white/[0.07]"
-                }
-              `}
+              className="relative flex items-center gap-3 px-4 py-3 rounded-xl text-[14px] font-semibold transition-colors duration-150 group"
             >
-              <span className={active ? "text-[#111410]" : "text-white/40 group-hover:text-white/70"}>
+              {/* Active background pill — animated on desktop, plain on mobile */}
+              {active && (
+                isMobile ? (
+                  <span className="absolute inset-0 rounded-xl bg-[#7fe05b]" />
+                ) : (
+                  <motion.span
+                    layoutId="sidebar-active-pill"
+                    className="absolute inset-0 rounded-xl bg-[#7fe05b]"
+                    transition={{ type: "spring", stiffness: 380, damping: 34 }}
+                  />
+                )
+              )}
+
+              {/* Icon */}
+              <span
+                className={`relative z-10 transition-colors duration-150 ${
+                  active ? "text-[#111410]" : "text-white/40 group-hover:text-white/70"
+                }`}
+              >
                 {item.icon(active)}
               </span>
-              {item.label}
+
+              {/* Label */}
+              <span
+                className={`relative z-10 transition-colors duration-150 ${
+                  active ? "text-[#111410]" : "text-white/50 group-hover:text-white"
+                }`}
+              >
+                {item.label}
+              </span>
             </Link>
           );
         })}
       </nav>
 
-      {/* ── User Info + Logout ── */}
+      {/* ── User + Logout ── */}
       <div className="px-4 pb-7 pt-4 border-t border-white/10">
         <div className="flex items-center gap-3 px-2 py-2">
-          {/* Avatar */}
           <div className="w-10 h-10 rounded-full bg-[#7fe05b] flex items-center justify-center text-[#111410] font-black text-base shrink-0">
             B
           </div>
@@ -125,7 +137,6 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
             <p className="text-white text-[13.5px] font-bold truncate">Budi Santoso</p>
             <p className="text-white/40 text-[11px] truncate">20241001 · Siswa</p>
           </div>
-          {/* Logout */}
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
             className="text-white/30 hover:text-red-400 transition-colors shrink-0"
