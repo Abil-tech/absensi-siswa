@@ -212,7 +212,7 @@ export default function DashboardContent({ onMenuClick }: Props) {
           </div>
 
           {/* ── MOBILE: Card list (< md) ── */}
-          <div className="md:hidden divide-y divide-black/[0.04]">
+          <div className="md:hidden divide-y divide-black/0.04">
             {/* Mobile column labels */}
             <div className="grid grid-cols-[1fr_auto_auto] items-center px-4 py-2.5 bg-[#f9f9f5]">
               <span className="text-[10.5px] font-bold text-[#9a9a9a] uppercase tracking-wide">Mata Pelajaran</span>
@@ -264,7 +264,7 @@ export default function DashboardContent({ onMenuClick }: Props) {
                 </div>
 
                 {/* Row 2: monthly avg bar */}
-                <div className="mt-2.5 ml-[46px] flex items-center gap-2">
+                <div className="mt-2.5 ml-46px flex items-center gap-2">
                   <div className="flex-1 max-w-[140px] h-1.5 rounded-full bg-[#e8e8e0] overflow-hidden">
                     <div
                       className="h-full rounded-full"
