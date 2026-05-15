@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
+import { signIn, getSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
 export default function LoginForm() {
@@ -30,24 +30,26 @@ export default function LoginForm() {
       return;
     }
 
-    // Ambil session untuk cek role, lalu redirect sesuai role
-    const res = await fetch("/api/auth/session");
-    const session = await res.json();
-    const role = session?.user?.role;
+    // Pakai getSession() — tunggu sampai session benar-benar tersedia
+    const session = await getSession();
+    const role = (session?.user as any)?.role;
 
     if (role === "admin") {
       router.push("/dashboard/admin");
-    } else if (role === "guru") {
-      router.push("/dashboard/guru");
+    } else if (role === "walas") {
+      router.push("/dashboard/walas");
+    } else if (role === "bk") {
+      router.push("/dashboard/bk");
+    } else if (role === "siswa") {
+      router.push("/dashboard/siswa");
     } else {
-      // siswa (default)
+      // fallback kalau role tidak dikenali
       router.push("/dashboard/siswa");
     }
   }
 
   return (
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
-      {/* ── Error Banner ── */}
       {error && (
         <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 text-[13px] font-medium rounded-xl px-4 py-3">
           <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
@@ -58,11 +60,8 @@ export default function LoginForm() {
         </div>
       )}
 
-      {/* ── User ID / Email ── */}
       <div className="flex flex-col gap-2">
-        <label className="text-[13.5px] font-semibold text-[#2d2d2d]">
-          User ID / Email
-        </label>
+        <label className="text-[13.5px] font-semibold text-[#2d2d2d]">User ID / Email</label>
         <div className="relative">
           <input
             type="text"
@@ -71,13 +70,7 @@ export default function LoginForm() {
             onChange={(e) => setUserId(e.target.value)}
             required
             autoComplete="username"
-            className="
-              w-full pl-4 pr-11 py-3.5
-              bg-[#f0f0ea] text-[#1a1a1a] text-sm placeholder:text-[#b0b0a8]
-              rounded-[10px] border border-transparent outline-none
-              focus:border-[#7fe05b] focus:bg-white
-              transition-all duration-200
-            "
+            className="w-full pl-4 pr-11 py-3.5 bg-[#f0f0ea] text-[#1a1a1a] text-sm placeholder:text-[#b0b0a8] rounded-[10px] border border-transparent outline-none focus:border-[#7fe05b] focus:bg-white transition-all duration-200"
           />
           <span className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
@@ -88,14 +81,10 @@ export default function LoginForm() {
         </div>
       </div>
 
-      {/* ── Password ── */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <label className="text-[13.5px] font-semibold text-[#2d2d2d]">Password</label>
-          <button
-            type="button"
-            className="text-[13px] font-semibold text-[#4a9e2f] hover:opacity-75 transition-opacity"
-          >
+          <button type="button" className="text-[13px] font-semibold text-[#4a9e2f] hover:opacity-75 transition-opacity">
             Lupa Kata Sandi?
           </button>
         </div>
@@ -106,13 +95,7 @@ export default function LoginForm() {
             onChange={(e) => setPassword(e.target.value)}
             required
             autoComplete="current-password"
-            className="
-              w-full pl-4 pr-11 py-3.5
-              bg-[#f0f0ea] text-[#1a1a1a] text-sm
-              rounded-[10px] border border-transparent outline-none
-              focus:border-[#7fe05b] focus:bg-white
-              transition-all duration-200
-            "
+            className="w-full pl-4 pr-11 py-3.5 bg-[#f0f0ea] text-[#1a1a1a] text-sm rounded-[10px] border border-transparent outline-none focus:border-[#7fe05b] focus:bg-white transition-all duration-200"
           />
           <button
             type="button"
@@ -128,26 +111,18 @@ export default function LoginForm() {
               </svg>
             ) : (
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                <rect x="4" y="7" width="10" height="8" rx="2" stroke="currentColor" strokeWidth="1.4" />
-                <path d="M6 7V5a3 3 0 016 0v2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                <path d="M2 9s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5Z" stroke="currentColor" strokeWidth="1.4" />
+                <circle cx="9" cy="9" r="2" stroke="currentColor" strokeWidth="1.4" />
               </svg>
             )}
           </button>
         </div>
       </div>
 
-      {/* ── Submit ── */}
       <button
         type="submit"
         disabled={loading}
-        className="
-          mt-4 w-full py-3.5
-          bg-[#7fe05b] hover:bg-[#6bcf49] active:scale-[0.98]
-          disabled:opacity-60 disabled:cursor-not-allowed
-          text-[#1a1a1a] text-[13.5px] font-extrabold tracking-[1.5px]
-          rounded-full flex items-center justify-center
-          transition-all duration-150
-        "
+        className="mt-4 w-full py-3.5 bg-[#7fe05b] hover:bg-[#6bcf49] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed text-[#1a1a1a] text-[13.5px] font-extrabold tracking-[1.5px] rounded-full flex items-center justify-center transition-all duration-150"
       >
         {loading ? (
           <span className="w-5 h-5 border-[2.5px] border-black/20 border-t-black rounded-full animate-spin" />

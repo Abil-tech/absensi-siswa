@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 interface SidebarProps {
   open: boolean;
   onClose: () => void;
+  user: { name: string; id: string; email: string };
 }
 
 const navItems = [
@@ -30,19 +31,13 @@ const navItems = [
     icon: (active: boolean) => (
       <svg width="19" height="19" viewBox="0 0 20 20" fill="none">
         <circle cx="10" cy="7" r="4" fill="currentColor" opacity={active ? "1" : ".8"} />
-        <path
-          d="M2 18c0-4 3.582-7 8-7s8 3 8 7"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          opacity={active ? "1" : ".8"}
-        />
+        <path d="M2 18c0-4 3.582-7 8-7s8 3 8 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" opacity={active ? "1" : ".8"} />
       </svg>
     ),
   },
 ];
 
-export default function Sidebar({ open, onClose }: SidebarProps) {
+export default function Sidebar({ open, onClose, user }: SidebarProps) {
   const pathname = usePathname();
   const [isMobile, setIsMobile] = useState(false);
 
@@ -58,6 +53,9 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
     return pathname.startsWith(href);
   }
 
+  // Inisial dari nama user
+  const initial = user.name?.charAt(0)?.toUpperCase() ?? "S";
+
   return (
     <aside
       className={`
@@ -67,7 +65,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
         ${open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
       `}
     >
-      {/* ── Logo ── */}
+      {/* Logo */}
       <div className="px-6 pt-8 pb-6 border-b border-white/10">
         <div className="flex items-center gap-2.5">
           <svg width="26" height="26" viewBox="0 0 28 28" fill="none" aria-hidden>
@@ -81,7 +79,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
         </div>
       </div>
 
-      {/* ── Nav ── */}
+      {/* Nav */}
       <nav className="flex-1 px-3 py-6 flex flex-col gap-1">
         {navItems.map((item) => {
           const active = isActive(item.href);
@@ -92,7 +90,6 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
               onClick={onClose}
               className="relative flex items-center gap-3 px-4 py-3 rounded-xl text-[14px] font-semibold transition-colors duration-150 group"
             >
-              {/* Active background pill — animated on desktop, plain on mobile */}
               {active && (
                 isMobile ? (
                   <span className="absolute inset-0 rounded-xl bg-[#7fe05b]" />
@@ -104,22 +101,10 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                   />
                 )
               )}
-
-              {/* Icon */}
-              <span
-                className={`relative z-10 transition-colors duration-150 ${
-                  active ? "text-[#111410]" : "text-white/40 group-hover:text-white/70"
-                }`}
-              >
+              <span className={`relative z-10 transition-colors duration-150 ${active ? "text-[#111410]" : "text-white/40 group-hover:text-white/70"}`}>
                 {item.icon(active)}
               </span>
-
-              {/* Label */}
-              <span
-                className={`relative z-10 transition-colors duration-150 ${
-                  active ? "text-[#111410]" : "text-white/50 group-hover:text-white"
-                }`}
-              >
+              <span className={`relative z-10 transition-colors duration-150 ${active ? "text-[#111410]" : "text-white/50 group-hover:text-white"}`}>
                 {item.label}
               </span>
             </Link>
@@ -127,15 +112,15 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
         })}
       </nav>
 
-      {/* ── User + Logout ── */}
+      {/* User + Logout */}
       <div className="px-4 pb-7 pt-4 border-t border-white/10">
         <div className="flex items-center gap-3 px-2 py-2">
           <div className="w-10 h-10 rounded-full bg-[#7fe05b] flex items-center justify-center text-[#111410] font-black text-base shrink-0">
-            B
+            {initial}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-white text-[13.5px] font-bold truncate">Budi Santoso</p>
-            <p className="text-white/40 text-[11px] truncate">20241001 · Siswa</p>
+            <p className="text-white text-[13.5px] font-bold truncate">{user.name}</p>
+            <p className="text-white/40 text-[11px] truncate">{user.email} · Siswa</p>
           </div>
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
@@ -144,13 +129,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
             title="Keluar"
           >
             <svg width="17" height="17" viewBox="0 0 18 18" fill="none">
-              <path
-                d="M7 2H4a1 1 0 00-1 1v12a1 1 0 001 1h3M12 13l4-4-4-4M16 9H7"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
+              <path d="M7 2H4a1 1 0 00-1 1v12a1 1 0 001 1h3M12 13l4-4-4-4M16 9H7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
         </div>

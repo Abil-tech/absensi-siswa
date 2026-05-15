@@ -1,36 +1,18 @@
-"use client";
-
-import { useState } from "react";
 import { getServerSession } from "next-auth";
-import { authOptions } from "../../api/auth/[...nextauth]/route";
+import { authOptions } from "../../../lib/auth";
 import { redirect } from "next/navigation";
-import Sidebar from "../../../components/sidebar";
-import DashboardContent from "../../../components/dashboardContent";
-import PageTransition from "../../../components/PageTransition";
+import SiswaDashboardClient from "./SiswaDashboardClient";
 
 export default async function DashboardSiswaPage() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
 
-  const user = session.user as { name?: string; role?: string };
-
+  const user = session.user as { name?: string; email?: string; id?: string; role?: string };
+  if (user.role !== "siswa" && user.role !== "admin") redirect("/login");
 
   return (
-    <div className="flex min-h-screen bg-[#f5f5ef] font-[family-name:var(--font-plus-jakarta)]">
-      {/* Mobile overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/40 z-20 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
-      <PageTransition>
-        <DashboardContent onMenuClick={() => setSidebarOpen(true)} />
-      </PageTransition>
-    </div>
+    <SiswaDashboardClient
+      user={{ name: user.name ?? "", id: user.id ?? "", email: user.email ?? "" }}
+    />
   );
 }
