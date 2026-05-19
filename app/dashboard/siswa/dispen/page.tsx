@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import Sidebar from "../components/Sidebar";
-import KehadiranContent from "../components/KehadiranContent";
+import DispenContent from "../components/DispenContent";
 import PageTransition from "../components/PageTransition";
 
-export default function KehadiranPage() {
+export default function DispenPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
@@ -20,7 +20,7 @@ export default function KehadiranPage() {
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <PageTransition>
-        <KehadiranContent onMenuClick={() => setSidebarOpen(true)} />
+        <DispenContent onMenuClick={() => setSidebarOpen(true)} />
       </PageTransition>
     </div>
   );

@@ -4,7 +4,6 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { signOut } from "next-auth/react";
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
 
 interface SidebarProps {
   open: boolean;
@@ -37,6 +36,28 @@ const navItems = [
     ),
   },
   {
+    label: "Dispen",
+    href: "/dashboard/siswa/dispen",
+    icon: (active: boolean) => (
+      <svg width="19" height="19" viewBox="0 0 20 20" fill="none">
+        <path
+          d="M12 2H5a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V8l-5-6z"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinejoin="round"
+          opacity={active ? "1" : ".7"}
+        />
+        <path
+          d="M12 2v6h6M7 11h6M7 14h4"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          opacity={active ? "1" : ".7"}
+        />
+      </svg>
+    ),
+  },
+  {
     label: "Profil",
     href: "/dashboard/siswa/profil",
     icon: (active: boolean) => (
@@ -56,14 +77,6 @@ const navItems = [
 
 export default function Sidebar({ open, onClose }: SidebarProps) {
   const pathname = usePathname();
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
 
   function isActive(href: string) {
     if (href === "/dashboard/siswa") return pathname === "/dashboard/siswa";
@@ -104,34 +117,22 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
               onClick={onClose}
               className="relative flex items-center gap-3 px-4 py-3 rounded-xl text-[14px] font-semibold transition-colors duration-150 group"
             >
-              {/* Active background pill — animated on desktop, plain on mobile */}
+              {/* Sliding pill dengan framer-motion layoutId */}
               {active && (
-                isMobile ? (
-                  <span className="absolute inset-0 rounded-xl bg-[#7fe05b]" />
-                ) : (
-                  <motion.span
-                    layoutId="sidebar-active-pill"
-                    className="absolute inset-0 rounded-xl bg-[#7fe05b]"
-                    transition={{ type: "spring", stiffness: 380, damping: 34 }}
-                  />
-                )
+                <motion.span
+                  layoutId="sidebar-active-pill"
+                  className="absolute inset-0 rounded-xl bg-[#7fe05b]"
+                  transition={{ type: "spring", stiffness: 380, damping: 34 }}
+                />
               )}
 
               {/* Icon */}
-              <span
-                className={`relative z-10 transition-colors duration-150 ${
-                  active ? "text-[#111410]" : "text-white/40 group-hover:text-white/70"
-                }`}
-              >
+              <span className={`relative z-10 transition-colors duration-150 ${active ? "text-[#111410]" : "text-white/40 group-hover:text-white/70"}`}>
                 {item.icon(active)}
               </span>
 
               {/* Label */}
-              <span
-                className={`relative z-10 transition-colors duration-150 ${
-                  active ? "text-[#111410]" : "text-white/50 group-hover:text-white"
-                }`}
-              >
+              <span className={`relative z-10 transition-colors duration-150 ${active ? "text-[#111410]" : "text-white/50 group-hover:text-white"}`}>
                 {item.label}
               </span>
             </Link>
@@ -151,7 +152,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
           </div>
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
-            className="text-white/30 hover:text-red-400 transition-colors shrink-0"
+            className="text-white/30 hover:text-red-400 transition-colors shrink-0 p-1"
             aria-label="Keluar"
             title="Keluar"
           >

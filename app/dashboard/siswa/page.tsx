@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Sidebar from "./components/sidebar";
+import Sidebar from "./components/Sidebar";
 import DashboardContent from "./components/dashboardContent";
 import PageTransition from "./components/PageTransition";
 
