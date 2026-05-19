@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { signOut } from "next-auth/react";
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 
 interface SidebarProps {
   open: boolean;
@@ -77,6 +78,14 @@ const navItems = [
 
 export default function Sidebar({ open, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   function isActive(href: string) {
     if (href === "/dashboard/siswa") return pathname === "/dashboard/siswa";
@@ -117,13 +126,17 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
               onClick={onClose}
               className="relative flex items-center gap-3 px-4 py-3 rounded-xl text-[14px] font-semibold transition-colors duration-150 group"
             >
-              {/* Sliding pill dengan framer-motion layoutId */}
+              {/* Pill — animasi geser hanya di desktop */}
               {active && (
-                <motion.span
-                  layoutId="sidebar-active-pill"
-                  className="absolute inset-0 rounded-xl bg-[#7fe05b]"
-                  transition={{ type: "spring", stiffness: 380, damping: 34 }}
-                />
+                isMobile ? (
+                  <span className="absolute inset-0 rounded-xl bg-[#7fe05b]" />
+                ) : (
+                  <motion.span
+                    layoutId="sidebar-active-pill"
+                    className="absolute inset-0 rounded-xl bg-[#7fe05b]"
+                    transition={{ type: "spring", stiffness: 380, damping: 34 }}
+                  />
+                )
               )}
 
               {/* Icon */}
