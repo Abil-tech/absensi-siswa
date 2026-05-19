@@ -9,6 +9,12 @@ const MONGODB_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/absens
 
 const users = [
   {
+    name: "admin",
+    userId: "4dm1n",
+    password: "4dm1n123",
+    role: "admin",
+  },
+  {
     name: "Siswa Test",
     userId: "20240001",
     password: "siswa123",
