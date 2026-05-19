@@ -25,6 +25,18 @@ const navItems = [
     ),
   },
   {
+    label: "Kehadiran",
+    href: "/dashboard/siswa/kehadiran",
+    icon: (active: boolean) => (
+      <svg width="19" height="19" viewBox="0 0 20 20" fill="none">
+        <rect x="2" y="3" width="16" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" fill="none" opacity={active ? "1" : ".7"} />
+        <path d="M2 7h16" stroke="currentColor" strokeWidth="1.5" opacity={active ? "1" : ".7"} />
+        <path d="M6 2v2M14 2v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity={active ? "1" : ".7"} />
+        <path d="M6 11l2.5 2.5L14 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
     label: "Profil",
     href: "/dashboard/siswa/profil",
     icon: (active: boolean) => (
