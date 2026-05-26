@@ -32,7 +32,7 @@ const JURUSAN_LIST = [
     singkatan: "DKV",
     deskripsi:
       "Program pendidikan yang fokus pada pengembangan keterampilan dalam menciptakan karya visual yang efektif untuk komunikasi, mencakup desain grafis, ilustrasi, fotografi, animasi, dan multimedia.",
-    image: "/images/dkv.jpg",
+    image: "/images/dkv.jpeg",
     logo: "/images/logo-dkv.png",
     // ↑ Simpan logo PNG jurusan DKV ke /public/images/logo-dkv.png
     accent: "#ef4444",
@@ -45,7 +45,7 @@ const JURUSAN_LIST = [
     singkatan: "PPLG",
     deskripsi:
       "Program pendidikan yang dirancang untuk mempersiapkan siswa dengan pengetahuan dan keterampilan praktis dalam pengembangan perangkat lunak dan pembuatan gim.",
-    image: "/images/pplg.jpg",
+    image: "/images/pplg.jpeg",
     logo: "/images/logo-pplg.png",
     // ↑ Simpan logo PNG jurusan PPLG ke /public/images/logo-pplg.png
     accent: "#ffd138",
@@ -58,7 +58,7 @@ const JURUSAN_LIST = [
     singkatan: "TJKT",
     deskripsi:
       "Program pendidikan yang dirancang untuk mempersiapkan siswa dengan pengetahuan dan keterampilan praktis dalam bidang jaringan komputer dan telekomunikasi.",
-    image: "/images/tjkt.jpg",
+    image: "/images/tjkt.jpeg",
     logo: "/images/logo-tjkt.png",
     // ↑ Simpan logo PNG jurusan TJKT ke /public/images/logo-tjkt.png
     accent: "#6BC1FF",
@@ -71,7 +71,7 @@ const JURUSAN_LIST = [
     singkatan: "MPLB",
     deskripsi:
       "Program pendidikan yang dirancang untuk mempersiapkan siswa dengan pengetahuan dan keterampilan praktis dalam mengelola administrasi perkantoran dan memberikan layanan bisnis yang efektif.",
-    image: "/images/mplb.jpg",
+    image: "/images/mplb.jpeg",
     logo: "/images/logo-mplb.png",
     // ↑ Simpan logo PNG jurusan MPLB ke /public/images/logo-mplb.png
     accent: "#e8d543",
@@ -84,7 +84,7 @@ const JURUSAN_LIST = [
     singkatan: "PM",
     deskripsi:
       "Program pendidikan yang fokus pada pengembangan keterampilan dalam bidang pemasaran dan penjualan, mencakup riset pasar, strategi pemasaran, hingga teknik penjualan dan pelayanan pelanggan.",
-    image: "/images/pm.jpg",
+    image: "/images/pm.jpeg",
     logo: "/images/logo-pm.png",
     // ↑ Simpan logo PNG jurusan PM ke /public/images/logo-pm.png
     accent: "#CCAF8F",
