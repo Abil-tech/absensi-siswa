@@ -1,14 +1,31 @@
-"use client";
-
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import LoginForm from "./LoginForm";
+import { UserRole } from "@/types/next-auth";
 
-export default function LoginPage() {
+const ROLE_REDIRECT: Record<UserRole, string> = {
+  admin: "/dashboard/admin",
+  walas: "/dashboard/guru",
+  bk:    "/dashboard/bk",
+  siswa: "/dashboard/siswa",
+};
+
+export default async function LoginPage() {
+  const session = await getServerSession(authOptions);
+
+  // Jika sudah login, redirect ke dashboard sesuai role
+  if (session?.user?.role) {
+    const role = session.user.role;
+    const destination = ROLE_REDIRECT[role] ?? "/dashboard/siswa";
+    redirect(destination);
+  }
+
   return (
     <main className="min-h-screen bg-[#f5f5ef] flex flex-col items-center px-4 pt-14 pb-10 font-[family-name:var(--font-plus-jakarta)]">
       {/* ── Header ── */}
       <header className="flex flex-col items-center mb-12">
         <div className="flex items-center gap-2.5 text-[1.65rem] font-extrabold text-[#1a1a1a] tracking-tight">
-          {/* Graduation cap icon */}
           <svg width="30" height="30" viewBox="0 0 28 28" fill="none" aria-hidden>
             <path
               d="M14 4L2 10L14 16L26 10L14 4Z"
@@ -50,4 +67,4 @@ export default function LoginPage() {
       </footer>
     </main>
   );
-}
+}   
