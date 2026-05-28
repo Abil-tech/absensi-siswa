@@ -51,49 +51,6 @@ export default function BkProfilContent({ onMenuClick }: Props) {
             Profil Saya
           </h1>
         </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setEditMode((v) => !v)}
-            style={{ WebkitTapHighlightColor: "transparent" }}
-            className={`
-              flex items-center gap-2 px-4 py-2 rounded-full text-[13px] font-bold
-              transition-all duration-150 active:opacity-70
-              ${editMode
-                ? "bg-[#7fe05b] text-[#111410]"
-                : "bg-white border border-black/10 text-[#1a1a1a]"
-              }
-            `}
-          >
-            {editMode ? (
-              <>
-                <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-                  <path d="M2 7l4 4 6-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                Simpan
-              </>
-            ) : (
-              <>
-                <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-                  <path d="M9.5 2.5l2 2L4 12H2v-2L9.5 2.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
-                </svg>
-                Edit Profil
-              </>
-            )}
-          </button>
-
-          <button
-            type="button"
-            className="relative w-9 h-9 flex items-center justify-center rounded-full bg-white border border-black/10 text-[#1a1a1a]"
-          >
-            <svg width="17" height="17" viewBox="0 0 18 18" fill="none">
-              <path d="M9 2a5 5 0 00-5 5v3l-1.5 2H15.5L14 10V7a5 5 0 00-5-5Z" stroke="currentColor" strokeWidth="1.5" />
-              <path d="M7 14a2 2 0 004 0" stroke="currentColor" strokeWidth="1.5" />
-            </svg>
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#7fe05b] rounded-full ring-1 ring-[#f5f5ef]" />
-          </button>
-        </div>
       </header>
 
       <main className="flex-1 px-4 sm:px-6 lg:px-8 py-5 sm:py-7 flex flex-col gap-5">

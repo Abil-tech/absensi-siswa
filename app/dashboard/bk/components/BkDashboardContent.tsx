@@ -97,13 +97,6 @@ export default function BkDashboardContent({ onMenuClick }: Props) {
             </h1>
           )}
         </div>
-        <button type="button" className="relative w-9 h-9 flex items-center justify-center rounded-full bg-white border border-black/10 text-[#1a1a1a]">
-          <svg width="17" height="17" viewBox="0 0 18 18" fill="none">
-            <path d="M9 2a5 5 0 00-5 5v3l-1.5 2H15.5L14 10V7a5 5 0 00-5-5Z" stroke="currentColor" strokeWidth="1.5" />
-            <path d="M7 14a2 2 0 004 0" stroke="currentColor" strokeWidth="1.5" />
-          </svg>
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#7fe05b] rounded-full ring-1 ring-[#f5f5ef]" />
-        </button>
       </header>
 
       <main className="flex-1 px-4 sm:px-6 lg:px-8 py-5 sm:py-7 flex flex-col gap-5">
