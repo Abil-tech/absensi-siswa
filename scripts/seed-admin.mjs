@@ -23,8 +23,8 @@ const users = [
     role: "siswa",
   },
   // Tambah user lain di sini jika perlu:
-  { name: "Wali Kelas 10A", userId: "WL001", password: "walas123", role: "walas" },
-  // { name: "Guru BK", userId: "BK001", password: "bk123", role: "bk" },
+  { name: "Wali Kelas 10A", userId: "WL11PPLG1", password: "walas123", role: "walas" },
+  { name: "Guru BK", userId: "BK001", password: "bk123", role: "bk" },
 ];
 
 async function main() {
