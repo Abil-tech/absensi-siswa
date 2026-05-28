@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import Sidebar from "../../../../components/sidebar";
-import ProfilContent from "../../../../components/profilContent";
-import PageTransition from "../../../../components/PageTransition";
+import Sidebar from "../components/Sidebar";
+import ProfilContent from "../components/profilContent";
+import PageTransition from "../components/PageTransition";
 
 export default function ProfilSiswaPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
