@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import Sidebar from "../../../../components/sidebar";
-import KehadiranContent from "../../../../components/KehadiranContent";
-import PageTransition from "../../../../components/PageTransition";
+import Sidebar from "../components/Sidebar";
+import KehadiranContent from "../components/KehadiranContent";
+import PageTransition from "../components/PageTransition";
 
 export default function KehadiranPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);

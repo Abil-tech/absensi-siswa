@@ -1,39 +1,38 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 interface Props {
   onMenuClick: () => void;
 }
 
-type StatusAbsensi = "hadir" | "sakit" | "izin" | null;
+type StatusType = "Hadir" | "Izin" | "Sakit" | "Terlambat" | "Dispen";
 
-interface SiswaAbsensi {
-  id: string;
-  nis: string;
-  nama: string;
-  status: StatusAbsensi;
-  waktu: string;
-  keterangan: string;
-}
-
-interface KelasData {
+const STUDENTS: {
   id: string;
   nama: string;
-}
+  checkin: string;
+  status: StatusType;
+  initials: string;
+}[] = [
+  { id: "202401001", nama: "Aaron Montgomery",  checkin: "07:25 AM", status: "Hadir",     initials: "AM" },
+  { id: "202401014", nama: "Beatrice Sullivan",  checkin: "07:42 AM", status: "Hadir",     initials: "BS" },
+  { id: "202401022", nama: "Curtis Rhodes",      checkin: "—",        status: "Izin",      initials: "CR" },
+  { id: "202401045", nama: "Danielle Parker",    checkin: "08:15 AM", status: "Terlambat", initials: "DP" },
+  { id: "202401056", nama: "Elias Thorne",       checkin: "07:12 AM", status: "Hadir",     initials: "ET" },
+  { id: "202401063", nama: "Fiona Castillo",     checkin: "07:58 AM", status: "Hadir",     initials: "FC" },
+  { id: "202401071", nama: "George Lawson",      checkin: "—",        status: "Sakit",     initials: "GL" },
+  { id: "202401089", nama: "Hannah Brooks",      checkin: "07:33 AM", status: "Hadir",     initials: "HB" },
+  { id: "202401094", nama: "Ivan Mercer",        checkin: "08:02 AM", status: "Terlambat", initials: "IM" },
+  { id: "202401102", nama: "Julia Sinclair",     checkin: "07:20 AM", status: "Hadir",     initials: "JS" },
+];
 
-const STATUS_STYLE: Record<string, string> = {
-  hadir:  "bg-[#7fe05b] text-[#111410]",
-  sakit:  "bg-red-100 text-red-700",
-  izin:   "border border-gray-300 text-gray-700 bg-white",
-  null:   "bg-gray-100 text-gray-400",
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  hadir: "Hadir",
-  sakit: "Sakit",
-  izin:  "Izin",
-  null:  "Belum Absen",
+const STATUS_STYLE: Record<StatusType, string> = {
+  Hadir:     "bg-[#7fe05b] text-[#111410]",
+  Izin:      "border border-gray-300 text-gray-700 bg-white",
+  Sakit:     "bg-red-100 text-red-700",
+  Terlambat: "bg-[#111410] text-[#7fe05b]",
+  Dispen:    "bg-blue-100 text-blue-700",
 };
 
 const AVATAR_COLORS = [
@@ -42,49 +41,19 @@ const AVATAR_COLORS = [
   "#ec4899","#14b8a6",
 ];
 
-function getInitials(name: string): string {
-  return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
-}
-
 export default function GuruDashboardContent({ onMenuClick }: Props) {
   const [search, setSearch] = useState("");
-  const [kelas, setKelas] = useState<KelasData | null>(null);
-  const [siswaList, setSiswaList] = useState<SiswaAbsensi[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const res = await fetch("/api/absensi/kelas");
-        if (!res.ok) {
-          const json = await res.json();
-          setError(json.error ?? "Gagal memuat data");
-          return;
-        }
-        const json = await res.json();
-        setKelas(json.kelas);
-        setSiswaList(json.siswa);
-      } catch {
-        setError("Gagal terhubung ke server");
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchData();
-  }, []);
+  const totalSiswa = STUDENTS.length;
+  const hadirHariIni = STUDENTS.filter((s) => s.status === "Hadir").length;
+  const tidakHadir = STUDENTS.filter((s) => s.status !== "Hadir" && s.status !== "Terlambat").length;
+  const tingkatKetidakhadiran = ((tidakHadir / totalSiswa) * 100).toFixed(1);
 
-  const totalSiswa = siswaList.length;
-  const hadirHariIni = siswaList.filter((s) => s.status === "hadir").length;
-  const tidakHadir = siswaList.filter((s) => s.status === "sakit" || s.status === "izin").length;
-  const tingkatKetidakhadiran = totalSiswa > 0
-    ? ((tidakHadir / totalSiswa) * 100).toFixed(1)
-    : "0.0";
-
-  const filtered = siswaList.filter(
+  const filtered = STUDENTS.filter(
     (s) =>
       s.nama.toLowerCase().includes(search.toLowerCase()) ||
-      s.nis.includes(search)
+      s.id.includes(search)
   );
 
   return (
@@ -123,18 +92,15 @@ export default function GuruDashboardContent({ onMenuClick }: Props) {
 
         {/* ── Class label ── */}
         <h2 className="text-[1.1rem] sm:text-[1.25rem] font-extrabold text-[#1a1a1a] tracking-tight">
-          {loading ? "Memuat..." : error ? "—" : `Kelas ${kelas?.nama ?? "—"}`}
+          Kelas XI - 1 PPLG
         </h2>
 
-        {/* ── Error state ── */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 text-[13px] font-medium rounded-xl px-4 py-3">
-            {error}
-          </div>
-        )}
-
         {/* ── Stat Cards ── */}
+        {/* Mobile: 2-col grid (card 1 full width, card 2&3 side by side) */}
+        {/* Desktop: 3-col grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+
+          {/* Jumlah Siswa — full width di mobile */}
           <div className="col-span-2 sm:col-span-1 bg-white rounded-2xl p-4 sm:p-5 shadow-[0_2px_16px_rgba(0,0,0,0.05)] flex sm:flex-col items-center sm:items-start gap-4 sm:gap-0">
             <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#111410] flex items-center justify-center sm:mb-4 shrink-0">
               <svg width="18" height="18" viewBox="0 0 22 22" fill="none">
@@ -146,12 +112,11 @@ export default function GuruDashboardContent({ onMenuClick }: Props) {
             </div>
             <div>
               <p className="text-[11px] sm:text-[12px] font-semibold text-[#9a9a9a] uppercase tracking-wide">Jumlah Siswa</p>
-              <p className="text-[2rem] sm:text-[2.4rem] font-black text-[#1a1a1a] leading-tight tracking-tight mt-0.5">
-                {loading ? "—" : totalSiswa}
-              </p>
+              <p className="text-[2rem] sm:text-[2.4rem] font-black text-[#1a1a1a] leading-tight tracking-tight mt-0.5">{totalSiswa}</p>
             </div>
           </div>
 
+          {/* Hadir Hari Ini */}
           <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-[0_2px_16px_rgba(0,0,0,0.05)]">
             <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#f0fce8] flex items-center justify-center mb-3 sm:mb-4">
               <svg width="18" height="18" viewBox="0 0 22 22" fill="none">
@@ -160,11 +125,10 @@ export default function GuruDashboardContent({ onMenuClick }: Props) {
               </svg>
             </div>
             <p className="text-[11px] sm:text-[12px] font-semibold text-[#9a9a9a] uppercase tracking-wide leading-tight">Hadir Hari Ini</p>
-            <p className="text-[2rem] sm:text-[2.4rem] font-black text-[#7fe05b] leading-tight tracking-tight mt-0.5">
-              {loading ? "—" : hadirHariIni}
-            </p>
+            <p className="text-[2rem] sm:text-[2.4rem] font-black text-[#7fe05b] leading-tight tracking-tight mt-0.5">{hadirHariIni}</p>
           </div>
 
+          {/* Tingkat Ketidakhadiran */}
           <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-[0_2px_16px_rgba(0,0,0,0.05)]">
             <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-red-50 flex items-center justify-center mb-3 sm:mb-4">
               <svg width="18" height="18" viewBox="0 0 22 22" fill="none">
@@ -173,14 +137,15 @@ export default function GuruDashboardContent({ onMenuClick }: Props) {
               </svg>
             </div>
             <p className="text-[11px] sm:text-[12px] font-semibold text-[#9a9a9a] uppercase tracking-wide leading-tight">Tingkat Absen</p>
-            <p className="text-[2rem] sm:text-[2.4rem] font-black text-[#ef4444] leading-tight tracking-tight mt-0.5">
-              {loading ? "—" : `${tingkatKetidakhadiran}%`}
-            </p>
+            <p className="text-[2rem] sm:text-[2.4rem] font-black text-[#ef4444] leading-tight tracking-tight mt-0.5">{tingkatKetidakhadiran}%</p>
           </div>
+
         </div>
 
         {/* ── Daftar Siswa ── */}
         <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(0,0,0,0.05)] overflow-hidden">
+
+          {/* Table header + search */}
           <div className="px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-black/5">
             <h3 className="text-[1rem] font-extrabold text-[#1a1a1a]">Daftar Siswa</h3>
             <div className="relative">
@@ -193,87 +158,144 @@ export default function GuruDashboardContent({ onMenuClick }: Props) {
                 placeholder="Telusuri siswa..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 pr-4 py-2 text-[13px] bg-[#f0f0ea] text-[#1a1a1a] placeholder:text-[#b0b0a8] rounded-xl border border-transparent outline-none focus:border-[#7fe05b] focus:bg-white transition-all duration-200 w-full sm:w-52"
+                className="
+                  pl-9 pr-4 py-2 text-[13px]
+                  bg-[#f0f0ea] text-[#1a1a1a] placeholder:text-[#b0b0a8]
+                  rounded-xl border border-transparent outline-none
+                  focus:border-[#7fe05b] focus:bg-white
+                  transition-all duration-200 w-full sm:w-52
+                "
               />
             </div>
           </div>
 
-          {/* Loading state */}
-          {loading && (
-            <div className="px-6 py-12 text-center text-[13px] text-[#9a9a9a]">
-              Memuat data siswa...
+          {/* ── DESKTOP table ── */}
+          <div className="hidden sm:block">
+            <div className="grid grid-cols-[1fr_2fr_1.2fr_1fr_auto] px-6 py-3 bg-[#f9f9f5] text-[11.5px] font-bold text-[#9a9a9a] uppercase tracking-wider border-b border-black/5">
+              <span>Nomor ID</span>
+              <span>Nama Siswa</span>
+              <span>Check-in Terakhir</span>
+              <span>Keterangan</span>
+              <span>Action</span>
             </div>
-          )}
 
-          {/* Desktop table */}
-          {!loading && !error && (
-            <div className="hidden sm:block">
-              <div className="grid grid-cols-[1fr_2fr_1.2fr_1fr] px-6 py-3 bg-[#f9f9f5] text-[11.5px] font-bold text-[#9a9a9a] uppercase tracking-wider border-b border-black/5">
-                <span>NIS</span>
-                <span>Nama Siswa</span>
-                <span>Waktu Absen</span>
-                <span>Status</span>
-              </div>
-              <div className="divide-y divide-black/[0.04]">
-                {filtered.map((siswa, i) => (
-                  <div key={siswa.id} className="grid grid-cols-[1fr_2fr_1.2fr_1fr] px-6 py-4 items-center hover:bg-[#fafaf7] transition-colors">
-                    <span className="text-[13px] font-mono font-semibold text-[#6b6b6b]">{siswa.nis}</span>
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="w-9 h-9 rounded-full flex items-center justify-center text-white text-[11px] font-black shrink-0"
-                        style={{ background: AVATAR_COLORS[i % AVATAR_COLORS.length] }}
-                      >
-                        {getInitials(siswa.nama)}
-                      </div>
-                      <span className="text-[13.5px] font-bold text-[#1a1a1a]">{siswa.nama}</span>
+            <div className="divide-y divide-black/[0.04]">
+              {filtered.map((student, i) => (
+                <div
+                  key={student.id}
+                  className="grid grid-cols-[1fr_2fr_1.2fr_1fr_auto] px-6 py-4 items-center hover:bg-[#fafaf7] transition-colors"
+                >
+                  <span className="text-[13px] font-mono font-semibold text-[#6b6b6b]">{student.id}</span>
+
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-9 h-9 rounded-full flex items-center justify-center text-white text-[11px] font-black shrink-0"
+                      style={{ background: AVATAR_COLORS[i % AVATAR_COLORS.length] }}
+                    >
+                      {student.initials}
                     </div>
-                    <span className="text-[13px] font-semibold text-[#2d2d2d]">{siswa.waktu}</span>
-                    <span className={`inline-flex items-center px-3.5 py-1.5 rounded-full text-[12px] font-bold w-fit ${STATUS_STYLE[siswa.status ?? "null"]}`}>
-                      {STATUS_LABEL[siswa.status ?? "null"]}
-                    </span>
+                    <span className="text-[13.5px] font-bold text-[#1a1a1a]">{student.nama}</span>
                   </div>
-                ))}
-                {filtered.length === 0 && (
-                  <div className="px-6 py-12 text-center text-[13px] text-[#9a9a9a]">
-                    Tidak ada siswa yang cocok dengan pencarian.
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
 
-          {/* Mobile list */}
-          {!loading && !error && (
-            <div className="sm:hidden divide-y divide-black/[0.04]">
-              {filtered.map((siswa, i) => (
-                <div key={siswa.id} className="px-4 py-4 flex items-center gap-3">
-                  <div
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-white text-[11px] font-black shrink-0"
-                    style={{ background: AVATAR_COLORS[i % AVATAR_COLORS.length] }}
-                  >
-                    {getInitials(siswa.nama)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13.5px] font-bold text-[#1a1a1a] truncate">{siswa.nama}</p>
-                    <p className="text-[11.5px] text-[#9a9a9a] font-mono mt-0.5">{siswa.nis} · {siswa.waktu}</p>
-                  </div>
-                  <span className={`px-3 py-1.5 rounded-full text-[11.5px] font-bold shrink-0 ${STATUS_STYLE[siswa.status ?? "null"]}`}>
-                    {STATUS_LABEL[siswa.status ?? "null"]}
+                  <span className="text-[13px] font-semibold text-[#2d2d2d]">{student.checkin}</span>
+
+                  <span className={`inline-flex items-center px-3.5 py-1.5 rounded-full text-[12px] font-bold w-fit ${STATUS_STYLE[student.status]}`}>
+                    {student.status}
                   </span>
+
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setMenuOpenId(menuOpenId === student.id ? null : student.id)}
+                      className="p-1.5 text-[#9a9a9a] hover:text-[#1a1a1a] transition-colors rounded-lg hover:bg-[#f0f0ea]"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <circle cx="8" cy="3" r="1.2" fill="currentColor" />
+                        <circle cx="8" cy="8" r="1.2" fill="currentColor" />
+                        <circle cx="8" cy="13" r="1.2" fill="currentColor" />
+                      </svg>
+                    </button>
+                    {menuOpenId === student.id && (
+                      <div className="absolute right-0 top-8 bg-white rounded-xl shadow-lg border border-black/8 z-20 min-w-[150px] overflow-hidden">
+                        {["Lihat Detail", "Edit Status", "Kirim Notifikasi"].map((action) => (
+                          <button
+                            key={action}
+                            type="button"
+                            onClick={() => setMenuOpenId(null)}
+                            className="w-full text-left px-4 py-2.5 text-[13px] font-medium text-[#1a1a1a] hover:bg-[#f0f0ea] transition-colors"
+                          >
+                            {action}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
+
               {filtered.length === 0 && (
-                <div className="px-4 py-10 text-center text-[13px] text-[#9a9a9a]">
-                  Tidak ada siswa yang cocok.
+                <div className="px-6 py-12 text-center text-[13px] text-[#9a9a9a]">
+                  Tidak ada siswa yang cocok dengan pencarian.
                 </div>
               )}
             </div>
-          )}
+          </div>
 
-          <div className="px-4 sm:px-6 py-3.5 border-t border-black/5">
+          {/* ── MOBILE card list ── */}
+          <div className="sm:hidden divide-y divide-black/[0.04]">
+            {filtered.map((student, i) => (
+              <div key={student.id} className="px-4 py-4 flex items-center gap-3">
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-white text-[11px] font-black shrink-0"
+                  style={{ background: AVATAR_COLORS[i % AVATAR_COLORS.length] }}
+                >
+                  {student.initials}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13.5px] font-bold text-[#1a1a1a] truncate">{student.nama}</p>
+                  <p className="text-[11.5px] text-[#9a9a9a] font-mono mt-0.5">{student.id} · {student.checkin}</p>
+                </div>
+                <span className={`px-3 py-1.5 rounded-full text-[11.5px] font-bold shrink-0 ${STATUS_STYLE[student.status]}`}>
+                  {student.status}
+                </span>
+                <button
+                  type="button"
+                  className="p-1 text-[#9a9a9a] shrink-0"
+                  onClick={() => setMenuOpenId(menuOpenId === student.id ? null : student.id)}
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <circle cx="8" cy="3" r="1.2" fill="currentColor" />
+                    <circle cx="8" cy="8" r="1.2" fill="currentColor" />
+                    <circle cx="8" cy="13" r="1.2" fill="currentColor" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+
+            {filtered.length === 0 && (
+              <div className="px-4 py-10 text-center text-[13px] text-[#9a9a9a]">
+                Tidak ada siswa yang cocok.
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="px-4 sm:px-6 py-3.5 border-t border-black/5 flex items-center justify-between">
             <p className="text-[12px] text-[#9a9a9a] font-medium">
-              {loading ? "Memuat..." : `Menampilkan ${filtered.length} dari ${totalSiswa} siswa`}
+              Menampilkan {filtered.length} dari {totalSiswa} siswa · Class XI-1 PPLG
             </p>
+            <div className="flex gap-1">
+              <button type="button" className="w-8 h-8 flex items-center justify-center rounded-lg border border-black/10 text-[#6b6b6b] hover:bg-[#f0f0ea] transition">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M9 11L5 7l4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                </svg>
+              </button>
+              <button type="button" className="w-8 h-8 flex items-center justify-center rounded-lg border border-black/10 text-[#6b6b6b] hover:bg-[#f0f0ea] transition">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M5 11l4-4-4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </main>
