@@ -11,7 +11,7 @@ interface SidebarProps { open: boolean; onClose: () => void; }
 const navItems = [
   {
     label: "Dashboard",
-    href: "/dashboard/guru-bk",
+    href: "/dashboard/bk",
     icon: (active: boolean) => (
       <svg width="19" height="19" viewBox="0 0 20 20" fill="none">
         <rect x="2" y="2" width="7" height="7" rx="1.5" fill="currentColor" />
@@ -23,7 +23,7 @@ const navItems = [
   },
   {
     label: "Pengaduan Masuk",
-    href: "/dashboard/guru-bk/pengaduan",
+    href: "/dashboard/bk/pengaduan",
     icon: (active: boolean) => (
       <svg width="19" height="19" viewBox="0 0 20 20" fill="none">
         <path d="M17 10a7 7 0 01-7 7H4l-2 2V7a7 7 0 0113 3z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" opacity={active ? "1" : ".7"} />
@@ -33,7 +33,7 @@ const navItems = [
   },
   {
     label: "Profil",
-    href: "/dashboard/guru-bk/profil",
+    href: "/dashboard/bk/profil",
     icon: (active: boolean) => (
       <svg width="19" height="19" viewBox="0 0 20 20" fill="none">
         <circle cx="10" cy="7" r="4" fill="currentColor" opacity={active ? "1" : ".8"} />
@@ -55,7 +55,7 @@ export default function BkSidebar({ open, onClose }: SidebarProps) {
   }, []);
 
   function isActive(href: string) {
-    if (href === "/dashboard/guru-bk") return pathname === "/dashboard/guru-bk";
+    if (href === "/dashboard/bk") return pathname === "/dashboard/bk";
     return pathname.startsWith(href);
   }
 

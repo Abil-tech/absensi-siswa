@@ -48,7 +48,7 @@ const JURUSAN_LIST = [
     image: "/images/pplg.jpeg",
     logo: "/images/logo-pplg.png",
     // ↑ Simpan logo PNG jurusan PPLG ke /public/images/logo-pplg.png
-    accent: "#ffd138",
+    accent: "#FFD050",
     accentLight: "#fef3c7",
     icon: "💻",
   },
@@ -74,7 +74,7 @@ const JURUSAN_LIST = [
     image: "/images/mplb.jpeg",
     logo: "/images/logo-mplb.png",
     // ↑ Simpan logo PNG jurusan MPLB ke /public/images/logo-mplb.png
-    accent: "#e8d543",
+    accent: "#DEB539",
     accentLight: "#ede9fe",
     icon: "📋",
   },
@@ -91,12 +91,24 @@ const JURUSAN_LIST = [
     accentLight: "#d1fae5",
     icon: "📈",
   },
+  {
+    id: "ph",
+    nama: "Perhotelan",
+    singkatan: "PH",
+    deskripsi:
+      "Program pendidikan yang dirancang untuk mempersiapkan siswa dengan pengetahuan dan keterampilan di industri perhotelan dan pariwisata, mencakup layanan tamu, tata boga, housekeeping, dan manajemen hotel.",
+    image: "/images/ph.jpg",
+    // ↑ Simpan logo PNG jurusan Perhotelan ke /public/images/logo-ph.png
+    accent: "#8F9B7C",
+    accentLight: "#fce7f3",
+    icon: "🏨",
+  },
 ];
 
 const STATS = [
   { value: "1.200+", label: "Siswa Aktif"        },
   { value: "80+",    label: "Tenaga Pengajar"     },
-  { value: "5",      label: "Program Keahlian"    },
+  { value: "6",      label: "Program Keahlian"    },
   { value: "25th",   label: "Pengalaman"          },
 ];
 
@@ -199,21 +211,6 @@ export default function LandingPage() {
           </p>
 
           <div className="flex items-center gap-3 mt-7">
-            <Link
-              href="/login"
-              className="
-                flex items-center gap-2 px-6 py-3
-                bg-[#7fe05b] hover:bg-[#6bcf49]
-                text-[#111410] text-[13.5px] font-extrabold tracking-wide
-                rounded-full transition-all duration-150 active:scale-95
-                shadow-[0_4px_20px_rgba(127,224,91,0.5)]
-              "
-            >
-              Masuk Portal Akademik
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </Link>
             <ScrollToJurusan />
           </div>
         </div>
@@ -257,7 +254,7 @@ export default function LandingPage() {
               Pilih Jurusan <span className="text-[#7fe05b]">Terbaikmu</span>
             </h2>
             <p className="text-[#9a9a9a] text-[14px] mt-3 max-w-xl mx-auto leading-relaxed">
-              Lima program keahlian unggulan yang dirancang untuk mempersiapkan kamu menjadi profesional siap kerja
+              Enam program keahlian unggulan yang dirancang untuk mempersiapkan kamu menjadi profesional siap kerja
             </p>
           </div>
 
@@ -268,8 +265,8 @@ export default function LandingPage() {
             ))}
           </div>
 
-          {/* 2 jurusan bawah — centered */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-[calc(66.66%+10px)] mx-auto">
+          {/* 3 jurusan bawah */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
             {JURUSAN_LIST.slice(3).map((jurusan) => (
               <JurusanCard key={jurusan.id} jurusan={jurusan} />
             ))}
