@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 
@@ -58,9 +58,24 @@ const navItems = [
   },
 ];
 
+// Ambil inisial dari nama lengkap
+function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
+
 export default function GuruSidebar({ open, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const { data: session } = useSession();
   const [isMobile, setIsMobile] = useState(false);
+
+  const userName = session?.user?.name ?? "Wali Kelas";
+  const userRole = session?.user?.role ?? "walas";
+  const initials = getInitials(userName);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -108,7 +123,6 @@ export default function GuruSidebar({ open, onClose }: SidebarProps) {
               onClick={onClose}
               className="relative flex items-center gap-3 px-4 py-3 rounded-xl text-[14px] font-semibold transition-colors duration-150 group"
             >
-              {/* Pill — animasi geser hanya di desktop */}
               {active && (
                 isMobile ? (
                   <span className="absolute inset-0 rounded-xl bg-[#7fe05b]" />
@@ -135,16 +149,17 @@ export default function GuruSidebar({ open, onClose }: SidebarProps) {
       <div className="px-4 pb-7 pt-4 border-t border-white/10">
         <div className="flex items-center gap-3 px-2 py-2">
           <div className="w-10 h-10 rounded-full bg-[#7fe05b] flex items-center justify-center text-[#111410] font-black text-sm shrink-0">
-            DS
+            {initials}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-white text-[13.5px] font-bold truncate">Dr. Sarah Jenkins</p>
-            <p className="text-white/40 text-[11px] truncate">v1.0.4 · Guru</p>
+            <p className="text-white text-[13.5px] font-bold truncate">{userName}</p>
+            <p className="text-white/40 text-[11px] truncate capitalize">{userRole}</p>
           </div>
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
             className="text-white/30 hover:text-red-400 transition-colors shrink-0 p-1"
             aria-label="Keluar"
+            title="Keluar"
           >
             <svg width="17" height="17" viewBox="0 0 18 18" fill="none">
               <path d="M7 2H4a1 1 0 00-1 1v12a1 1 0 001 1h3M12 13l4-4-4-4M16 9H7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
