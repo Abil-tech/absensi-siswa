@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import Sidebar from "@/components/sidebar";
-import DashboardContent from "../../../components/dashboardContent";
-import PageTransition from "../../../components/PageTransition";
+import Sidebar from "./components/sidebar";
+import DashboardContent from "./components/dashboardContent";
+import PageTransition from "./components/PageTransition";
 
 export default function DashboardSiswaPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
