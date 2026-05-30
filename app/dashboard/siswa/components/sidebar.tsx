@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 
@@ -41,20 +41,8 @@ const navItems = [
     href: "/dashboard/siswa/dispen",
     icon: (active: boolean) => (
       <svg width="19" height="19" viewBox="0 0 20 20" fill="none">
-        <path
-          d="M12 2H5a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V8l-5-6z"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinejoin="round"
-          opacity={active ? "1" : ".7"}
-        />
-        <path
-          d="M12 2v6h6M7 11h6M7 14h4"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          opacity={active ? "1" : ".7"}
-        />
+        <path d="M12 2H5a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V8l-5-6z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" opacity={active ? "1" : ".7"} />
+        <path d="M12 2v6h6M7 11h6M7 14h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity={active ? "1" : ".7"} />
       </svg>
     ),
   },
@@ -64,21 +52,23 @@ const navItems = [
     icon: (active: boolean) => (
       <svg width="19" height="19" viewBox="0 0 20 20" fill="none">
         <circle cx="10" cy="7" r="4" fill="currentColor" opacity={active ? "1" : ".8"} />
-        <path
-          d="M2 18c0-4 3.582-7 8-7s8 3 8 7"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          opacity={active ? "1" : ".8"}
-        />
+        <path d="M2 18c0-4 3.582-7 8-7s8 3 8 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" opacity={active ? "1" : ".8"} />
       </svg>
     ),
   },
 ];
 
+function getInitials(name: string): string {
+  return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+}
+
 export default function Sidebar({ open, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const { data: session } = useSession();
   const [isMobile, setIsMobile] = useState(false);
+
+  const userName = session?.user?.name ?? "Siswa";
+  const initials = getInitials(userName);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -93,14 +83,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
   }
 
   return (
-    <aside
-      className={`
-        fixed lg:sticky top-0 left-0 h-screen w-[245px] z-30
-        bg-[#111410] flex flex-col shrink-0
-        transition-transform duration-300 ease-in-out
-        ${open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
-      `}
-    >
+    <aside className={`fixed lg:sticky top-0 left-0 h-screen w-[245px] z-30 bg-[#111410] flex flex-col shrink-0 transition-transform duration-300 ease-in-out ${open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
       {/* ── Logo ── */}
       <div className="px-6 pt-8 pb-6 border-b border-white/10">
         <div className="flex items-center gap-2.5">
@@ -120,13 +103,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
         {navItems.map((item) => {
           const active = isActive(item.href);
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onClose}
-              className="relative flex items-center gap-3 px-4 py-3 rounded-xl text-[14px] font-semibold transition-colors duration-150 group"
-            >
-              {/* Pill — animasi geser hanya di desktop */}
+            <Link key={item.href} href={item.href} onClick={onClose} className="relative flex items-center gap-3 px-4 py-3 rounded-xl text-[14px] font-semibold transition-colors duration-150 group">
               {active && (
                 isMobile ? (
                   <span className="absolute inset-0 rounded-xl bg-[#7fe05b]" />
@@ -138,13 +115,9 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                   />
                 )
               )}
-
-              {/* Icon */}
               <span className={`relative z-10 transition-colors duration-150 ${active ? "text-[#111410]" : "text-white/40 group-hover:text-white/70"}`}>
                 {item.icon(active)}
               </span>
-
-              {/* Label */}
               <span className={`relative z-10 transition-colors duration-150 ${active ? "text-[#111410]" : "text-white/50 group-hover:text-white"}`}>
                 {item.label}
               </span>
@@ -156,12 +129,12 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
       {/* ── User + Logout ── */}
       <div className="px-4 pb-7 pt-4 border-t border-white/10">
         <div className="flex items-center gap-3 px-2 py-2">
-          <div className="w-10 h-10 rounded-full bg-[#7fe05b] flex items-center justify-center text-[#111410] font-black text-base shrink-0">
-            B
+          <div className="w-10 h-10 rounded-full bg-[#7fe05b] flex items-center justify-center text-[#111410] font-black text-sm shrink-0">
+            {initials}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-white text-[13.5px] font-bold truncate">Budi Santoso</p>
-            <p className="text-white/40 text-[11px] truncate">20241001 · Siswa</p>
+            <p className="text-white text-[13.5px] font-bold truncate">{userName}</p>
+            <p className="text-white/40 text-[11px] truncate">Siswa</p>
           </div>
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
@@ -170,13 +143,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
             title="Keluar"
           >
             <svg width="17" height="17" viewBox="0 0 18 18" fill="none">
-              <path
-                d="M7 2H4a1 1 0 00-1 1v12a1 1 0 001 1h3M12 13l4-4-4-4M16 9H7"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
+              <path d="M7 2H4a1 1 0 00-1 1v12a1 1 0 001 1h3M12 13l4-4-4-4M16 9H7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
         </div>

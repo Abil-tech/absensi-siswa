@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { useSession } from "next-auth/react";
 
 interface Props {
   onMenuClick: () => void;
@@ -13,106 +14,144 @@ type KategoriType =
   | "Masalah Kehadiran"
   | "Lainnya";
 
-type PrioritasType = "Rendah" | "Sedang" | "Tinggi" | "Mendesak";
+interface SiswaOption {
+  id: string;
+  nis: string;
+  nama: string;
+}
 
 const KATEGORI_OPTIONS: { value: KategoriType; icon: string; desc: string }[] = [
-  { value: "Pelanggaran Disiplin", icon: "⚠️", desc: "Pelanggaran tata tertib sekolah" },
-  { value: "Masalah Akademik",     icon: "📚", desc: "Kesulitan belajar atau nilai menurun" },
-  { value: "Perundungan (Bullying)", icon: "🛡️", desc: "Intimidasi fisik maupun verbal" },
-  { value: "Masalah Kehadiran",    icon: "📅", desc: "Sering absen tanpa keterangan" },
-  { value: "Lainnya",              icon: "📝", desc: "Masalah lain yang perlu ditangani" },
+  { value: "Pelanggaran Disiplin",    icon: "⚠️", desc: "Pelanggaran tata tertib sekolah" },
+  { value: "Masalah Akademik",        icon: "📚", desc: "Kesulitan belajar atau nilai menurun" },
+  { value: "Perundungan (Bullying)",  icon: "🛡️", desc: "Intimidasi fisik maupun verbal" },
+  { value: "Masalah Kehadiran",       icon: "📅", desc: "Sering absen tanpa keterangan" },
+  { value: "Lainnya",                 icon: "📝", desc: "Masalah lain yang perlu ditangani" },
 ];
 
-const PRIORITAS_OPTIONS: {
-  value: PrioritasType;
-  color: string;
-  bg: string;
-  border: string;
-  dot: string;
-}[] = [
-  { value: "Rendah",   color: "#4a9e2f", bg: "#f0fce8", border: "#7fe05b", dot: "#7fe05b" },
-  { value: "Sedang",   color: "#b45309", bg: "#fef3c7", border: "#f59e0b", dot: "#f59e0b" },
-  { value: "Tinggi",   color: "#b91c1c", bg: "#fef2f2", border: "#ef4444", dot: "#ef4444" },
-  { value: "Mendesak", color: "#ffffff", bg: "#111410", border: "#111410", dot: "#7fe05b" },
-];
+function getInitials(name: string): string {
+  return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+}
 
-const SISWA_LIST = [
-  { id: "202401001", nama: "Aaron Montgomery",  kelas: "XI-1 PPLG" },
-  { id: "202401014", nama: "Beatrice Sullivan",  kelas: "XI-1 PPLG" },
-  { id: "202401022", nama: "Curtis Rhodes",      kelas: "XI-1 PPLG" },
-  { id: "202401045", nama: "Danielle Parker",    kelas: "XI-1 PPLG" },
-  { id: "202401056", nama: "Elias Thorne",       kelas: "XI-1 PPLG" },
-  { id: "202401063", nama: "Fiona Castillo",     kelas: "XI-1 PPLG" },
-  { id: "202401071", nama: "George Lawson",      kelas: "XI-1 PPLG" },
-  { id: "202401089", nama: "Hannah Brooks",      kelas: "XI-1 PPLG" },
-  { id: "202401094", nama: "Ivan Mercer",        kelas: "XI-1 PPLG" },
-  { id: "202401102", nama: "Julia Sinclair",     kelas: "XI-1 PPLG" },
+const AVATAR_COLORS = [
+  "#3b82f6","#8b5cf6","#f59e0b","#ef4444",
+  "#06b6d4","#10b981","#f97316","#6366f1","#ec4899","#14b8a6",
 ];
 
 export default function PengaduanContent({ onMenuClick }: Props) {
+  const { data: session } = useSession();
+
+  const [siswaList, setSiswaList]     = useState<SiswaOption[]>([]);
+  const [kelasNama, setKelasNama]     = useState<string>("");
+  const [loadingSiswa, setLoadingSiswa] = useState(true);
+
   const [kategori, setKategori]       = useState<KategoriType | null>(null);
-  const [prioritas, setPrioritas]     = useState<PrioritasType>("Sedang");
   const [siswaId, setSiswaId]         = useState("");
   const [siswaSearch, setSiswaSearch] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [judul, setJudul]             = useState("");
-  const [deskripsi, setDeskripsi]     = useState("");
+  const [keterangan, setKeterangan]   = useState("");
   const [file, setFile]               = useState<File | null>(null);
   const [submitted, setSubmitted]     = useState(false);
   const [loading, setLoading]         = useState(false);
+  const [error, setError]             = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const now = new Date();
   const tanggal = now.toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" });
   const waktu = now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", hour12: false }) + " WIB";
 
-  const filteredSiswa = SISWA_LIST.filter(
+  const userName = session?.user?.name ?? "Wali Kelas";
+  const initials = getInitials(userName);
+
+  // Fetch siswa dari kelas walas
+  useEffect(() => {
+    async function fetchSiswa() {
+      try {
+        const res = await fetch("/api/absensi/kelas");
+        if (!res.ok) return;
+        const json = await res.json();
+        setKelasNama(json.kelas?.nama ?? "");
+        setSiswaList(
+          json.siswa.map((s: any) => ({
+            id:   s.id,
+            nis:  s.nis,
+            nama: s.nama,
+          }))
+        );
+      } catch {
+        // gagal fetch tidak perlu error fatal
+      } finally {
+        setLoadingSiswa(false);
+      }
+    }
+    fetchSiswa();
+  }, []);
+
+  const filteredSiswa = siswaList.filter(
     (s) =>
       s.nama.toLowerCase().includes(siswaSearch.toLowerCase()) ||
-      s.id.includes(siswaSearch)
+      s.nis.includes(siswaSearch)
   );
 
-  const selectedSiswa = SISWA_LIST.find((s) => s.id === siswaId);
+  const selectedSiswa = siswaList.find((s) => s.id === siswaId);
 
   function handleFileChange(f: File | null) {
     if (!f) return;
-    if (f.size > 10 * 1024 * 1024) { alert("Ukuran file maksimal 10MB."); return; }
+    if (f.size > 10 * 1024 * 1024) {
+      setError("Ukuran file maksimal 10MB.");
+      return;
+    }
     setFile(f);
+    setError(null);
   }
 
   async function handleSubmit() {
-    if (!kategori)  { alert("Pilih kategori pengaduan."); return; }
-    if (!siswaId)   { alert("Pilih siswa yang dilaporkan."); return; }
-    if (!judul.trim()) { alert("Isi judul pengaduan."); return; }
-    if (!deskripsi.trim()) { alert("Isi deskripsi pengaduan."); return; }
+    setError(null);
+
+    if (!kategori)         { setError("Pilih kategori pengaduan."); return; }
+    if (!siswaId)          { setError("Pilih siswa yang dilaporkan."); return; }
+    if (!judul.trim())     { setError("Isi judul pengaduan."); return; }
+    if (!keterangan.trim()) { setError("Isi deskripsi pengaduan."); return; }
+    if (!file)             { setError("Lampiran wajib diisi."); return; }
 
     setLoading(true);
-    // Sambungkan ke API:
-    // const formData = new FormData();
-    // formData.append("kategori", kategori);
-    // formData.append("prioritas", prioritas);
-    // formData.append("siswaId", siswaId);
-    // formData.append("judul", judul);
-    // formData.append("deskripsi", deskripsi);
-    // if (file) formData.append("file", file);
-    // await fetch("/api/pengaduan", { method: "POST", body: formData });
-    await new Promise((r) => setTimeout(r, 1500));
-    setLoading(false);
-    setSubmitted(true);
+    try {
+      const formData = new FormData();
+      formData.append("siswaId",    siswaId);
+      formData.append("kategori",   kategori);
+      formData.append("judul",      judul);
+      formData.append("keterangan", keterangan);
+      formData.append("file",       file);
+
+      const res = await fetch("/api/pengaduan", {
+        method: "POST",
+        body: formData,
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.error ?? "Gagal mengirim pengaduan.");
+        return;
+      }
+
+      setSubmitted(true);
+    } catch {
+      setError("Gagal terhubung ke server.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   function handleReset() {
     setSubmitted(false);
     setKategori(null);
-    setPrioritas("Sedang");
     setSiswaId("");
     setSiswaSearch("");
     setJudul("");
-    setDeskripsi("");
+    setKeterangan("");
     setFile(null);
+    setError(null);
   }
-
-  const selectedPrioritas = PRIORITAS_OPTIONS.find((p) => p.value === prioritas)!;
 
   return (
     <div className="flex-1 flex flex-col min-h-screen overflow-y-auto">
@@ -153,25 +192,14 @@ export default function PengaduanContent({ onMenuClick }: Props) {
                 <div>
                   <h2 className="text-[1.3rem] font-extrabold text-[#1a1a1a]">Pengaduan Terkirim!</h2>
                   <p className="text-[#9a9a9a] text-sm mt-1.5">
-                    Pengaduan kamu telah diteruskan ke <span className="font-bold text-[#1a1a1a]">Guru BK</span>
+                    Pengaduan telah diteruskan ke <span className="font-bold text-[#1a1a1a]">Guru BK</span>
                   </p>
                   <p className="text-[#b0b0a8] text-[12.5px] mt-0.5">{tanggal} · {waktu}</p>
                 </div>
-
-                {/* Summary */}
                 <div className="w-full bg-[#f9f9f5] rounded-2xl p-5 text-left flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <p className="text-[11px] font-bold text-[#9a9a9a] uppercase tracking-wide">Kategori</p>
                     <p className="text-[13px] font-bold text-[#1a1a1a]">{kategori}</p>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <p className="text-[11px] font-bold text-[#9a9a9a] uppercase tracking-wide">Prioritas</p>
-                    <span
-                      className="text-[12px] font-black px-3 py-1 rounded-full"
-                      style={{ background: selectedPrioritas.bg, color: selectedPrioritas.color, border: `1px solid ${selectedPrioritas.border}` }}
-                    >
-                      {prioritas}
-                    </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <p className="text-[11px] font-bold text-[#9a9a9a] uppercase tracking-wide">Siswa</p>
@@ -182,7 +210,6 @@ export default function PengaduanContent({ onMenuClick }: Props) {
                     <p className="text-[13px] font-semibold text-[#1a1a1a]">{judul}</p>
                   </div>
                 </div>
-
                 <button
                   type="button"
                   onClick={handleReset}
@@ -198,22 +225,30 @@ export default function PengaduanContent({ onMenuClick }: Props) {
                 {/* ── Card header ── */}
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h2 className="text-[1.15rem] sm:text-[1.3rem] font-extrabold text-[#1a1a1a]">
-                      Form Pengaduan
-                    </h2>
-                    <p className="text-[12.5px] text-[#9a9a9a] mt-1">
-                      Laporkan masalah siswa kepada Guru BK untuk ditindaklanjuti.
-                    </p>
+                    <h2 className="text-[1.15rem] sm:text-[1.3rem] font-extrabold text-[#1a1a1a]">Form Pengaduan</h2>
+                    <p className="text-[12.5px] text-[#9a9a9a] mt-1">Laporkan masalah siswa kepada Guru BK untuk ditindaklanjuti.</p>
                   </div>
-                  {/* Pengirim info */}
                   <div className="flex items-center gap-2 bg-[#f0fce8] rounded-xl px-3 py-2 shrink-0">
-                    <div className="w-7 h-7 rounded-full bg-[#7fe05b] flex items-center justify-center text-[#111410] font-black text-[10px]">DS</div>
+                    <div className="w-7 h-7 rounded-full bg-[#7fe05b] flex items-center justify-center text-[#111410] font-black text-[10px]">
+                      {initials}
+                    </div>
                     <div className="hidden sm:block">
-                      <p className="text-[11px] font-bold text-[#1a1a1a] leading-none">Dr. Sarah Jenkins</p>
-                      <p className="text-[10px] text-[#4a9e2f] mt-0.5">XI-1 PPLG</p>
+                      <p className="text-[11px] font-bold text-[#1a1a1a] leading-none">{userName}</p>
+                      <p className="text-[10px] text-[#4a9e2f] mt-0.5">{kelasNama}</p>
                     </div>
                   </div>
                 </div>
+
+                {/* ── Error Banner ── */}
+                {error && (
+                  <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 text-[13px] font-medium rounded-xl px-4 py-3">
+                    <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+                      <circle cx="8" cy="8" r="7" stroke="#c0392b" strokeWidth="1.5" />
+                      <path d="M8 5v3.5M8 11h.01" stroke="#c0392b" strokeWidth="1.5" strokeLinecap="round" />
+                    </svg>
+                    {error}
+                  </div>
+                )}
 
                 {/* ── Tanggal & Waktu ── */}
                 <div className="grid grid-cols-2 gap-3">
@@ -222,8 +257,7 @@ export default function PengaduanContent({ onMenuClick }: Props) {
                     <div className="flex items-center gap-2 bg-[#f0f0ea] rounded-xl px-3.5 py-3">
                       <svg width="14" height="14" viewBox="0 0 18 18" fill="none" className="text-[#9a9a9a] shrink-0">
                         <rect x="2" y="3" width="14" height="13" rx="2" stroke="currentColor" strokeWidth="1.4" />
-                        <path d="M2 7h14" stroke="currentColor" strokeWidth="1.4" />
-                        <path d="M6 2v2M12 2v2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                        <path d="M2 7h14M6 2v2M12 2v2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
                       </svg>
                       <span className="text-[12.5px] font-semibold text-[#1a1a1a] truncate">{tanggal}</span>
                     </div>
@@ -247,24 +281,19 @@ export default function PengaduanContent({ onMenuClick }: Props) {
                   </label>
                   <div className="relative">
                     <div
-                      onClick={() => setShowDropdown((v) => !v)}
-                      className={`
-                        flex items-center gap-3 px-4 py-3 cursor-pointer rounded-xl
-                        border transition-all duration-200
-                        ${showDropdown
-                          ? "border-[#7fe05b] bg-white"
-                          : "border-transparent bg-[#f0f0ea] hover:bg-[#e8e8e0]"
-                        }
-                      `}
+                      onClick={() => !loadingSiswa && setShowDropdown((v) => !v)}
+                      className={`flex items-center gap-3 px-4 py-3 cursor-pointer rounded-xl border transition-all duration-200 ${showDropdown ? "border-[#7fe05b] bg-white" : "border-transparent bg-[#f0f0ea] hover:bg-[#e8e8e0]"}`}
                     >
-                      {selectedSiswa ? (
+                      {loadingSiswa ? (
+                        <span className="text-[13.5px] text-[#b0b0a8]">Memuat data siswa...</span>
+                      ) : selectedSiswa ? (
                         <>
                           <div className="w-7 h-7 rounded-full bg-[#3b82f6] flex items-center justify-center text-white text-[10px] font-black shrink-0">
-                            {selectedSiswa.nama.split(" ").map((n) => n[0]).slice(0, 2).join("")}
+                            {getInitials(selectedSiswa.nama)}
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-[13.5px] font-bold text-[#1a1a1a] truncate">{selectedSiswa.nama}</p>
-                            <p className="text-[11px] text-[#9a9a9a] font-mono">{selectedSiswa.id} · {selectedSiswa.kelas}</p>
+                            <p className="text-[11px] text-[#9a9a9a] font-mono">{selectedSiswa.nis}</p>
                           </div>
                         </>
                       ) : (
@@ -276,15 +305,13 @@ export default function PengaduanContent({ onMenuClick }: Props) {
                           <span className="text-[13.5px] text-[#b0b0a8]">Pilih siswa...</span>
                         </>
                       )}
-                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className={`text-[#9a9a9a] shrink-0 transition-transform ${showDropdown ? "rotate-180" : ""}`}>
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className={`text-[#9a9a9a] shrink-0 transition-transform ml-auto ${showDropdown ? "rotate-180" : ""}`}>
                         <path d="M3 5l4 4 4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
                       </svg>
                     </div>
 
-                    {/* Dropdown */}
                     {showDropdown && (
                       <div className="absolute top-full left-0 right-0 mt-1.5 bg-white rounded-xl border border-black/10 shadow-xl z-20 overflow-hidden">
-                        {/* Search dalam dropdown */}
                         <div className="p-2 border-b border-black/5">
                           <div className="relative">
                             <svg width="13" height="13" viewBox="0 0 16 16" fill="none" className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9a9a9a]">
@@ -293,7 +320,7 @@ export default function PengaduanContent({ onMenuClick }: Props) {
                             </svg>
                             <input
                               type="text"
-                              placeholder="Cari nama atau ID..."
+                              placeholder="Cari nama atau NIS..."
                               value={siswaSearch}
                               onChange={(e) => setSiswaSearch(e.target.value)}
                               className="w-full pl-8 pr-3 py-2 text-[13px] bg-[#f0f0ea] rounded-lg outline-none focus:bg-white border border-transparent focus:border-[#7fe05b] transition-all"
@@ -313,13 +340,13 @@ export default function PengaduanContent({ onMenuClick }: Props) {
                               >
                                 <div
                                   className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[10px] font-black shrink-0"
-                                  style={{ background: ["#3b82f6","#8b5cf6","#f59e0b","#ef4444","#06b6d4","#10b981","#f97316","#6366f1","#ec4899","#14b8a6"][i % 10] }}
+                                  style={{ background: AVATAR_COLORS[i % AVATAR_COLORS.length] }}
                                 >
-                                  {s.nama.split(" ").map((n) => n[0]).slice(0, 2).join("")}
+                                  {getInitials(s.nama)}
                                 </div>
                                 <div>
                                   <p className="text-[13px] font-bold text-[#1a1a1a]">{s.nama}</p>
-                                  <p className="text-[11px] text-[#9a9a9a] font-mono">{s.id}</p>
+                                  <p className="text-[11px] text-[#9a9a9a] font-mono">{s.nis}</p>
                                 </div>
                                 {siswaId === s.id && (
                                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="ml-auto text-[#4a9e2f]">
@@ -348,21 +375,11 @@ export default function PengaduanContent({ onMenuClick }: Props) {
                           key={opt.value}
                           type="button"
                           onClick={() => setKategori(opt.value)}
-                          style={{ WebkitTapHighlightColor: "transparent" }}
-                          className={`
-                            flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 text-left
-                            transition-all duration-150 active:opacity-70
-                            ${active
-                              ? "border-[#7fe05b] bg-[#f0fce8]"
-                              : "border-[#e8e8e0] bg-[#f9f9f5] hover:border-[#d0d0c8]"
-                            }
-                          `}
+                          className={`flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 text-left transition-all duration-150 active:opacity-70 ${active ? "border-[#7fe05b] bg-[#f0fce8]" : "border-[#e8e8e0] bg-[#f9f9f5] hover:border-[#d0d0c8]"}`}
                         >
                           <span className="text-xl shrink-0">{opt.icon}</span>
                           <div className="min-w-0">
-                            <p className={`text-[13px] font-bold truncate ${active ? "text-[#111410]" : "text-[#1a1a1a]"}`}>
-                              {opt.value}
-                            </p>
+                            <p className={`text-[13px] font-bold truncate ${active ? "text-[#111410]" : "text-[#1a1a1a]"}`}>{opt.value}</p>
                             <p className="text-[11px] text-[#9a9a9a] truncate">{opt.desc}</p>
                           </div>
                           {active && (
@@ -377,39 +394,7 @@ export default function PengaduanContent({ onMenuClick }: Props) {
                   </div>
                 </div>
 
-                {/* ── Tingkat Prioritas ── */}
-                <div className="flex flex-col gap-2">
-                  <label className="text-[11px] font-bold text-[#9a9a9a] uppercase tracking-wide">
-                    Tingkat Prioritas
-                  </label>
-                  <div className="flex gap-2 flex-wrap">
-                    {PRIORITAS_OPTIONS.map((opt) => {
-                      const active = prioritas === opt.value;
-                      return (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          onClick={() => setPrioritas(opt.value)}
-                          style={{
-                            WebkitTapHighlightColor: "transparent",
-                            background: active ? opt.bg : "#f0f0ea",
-                            borderColor: active ? opt.border : "transparent",
-                            color: active ? opt.color : "#6b6b6b",
-                          }}
-                          className="flex items-center gap-2 px-4 py-2 rounded-full border-2 text-[12.5px] font-bold transition-all duration-150 active:opacity-70"
-                        >
-                          <span
-                            className="w-2 h-2 rounded-full shrink-0"
-                            style={{ background: active ? opt.dot : "#9a9a9a" }}
-                          />
-                          {opt.value}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* ── Judul Pengaduan ── */}
+                {/* ── Judul ── */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[11px] font-bold text-[#9a9a9a] uppercase tracking-wide">
                     Judul Pengaduan <span className="text-red-400">*</span>
@@ -420,18 +405,12 @@ export default function PengaduanContent({ onMenuClick }: Props) {
                     value={judul}
                     onChange={(e) => setJudul(e.target.value)}
                     maxLength={100}
-                    className="
-                      w-full px-4 py-3 text-[13.5px]
-                      bg-[#f0f0ea] text-[#1a1a1a] placeholder:text-[#b0b0a8]
-                      rounded-xl border border-transparent outline-none
-                      focus:border-[#7fe05b] focus:bg-white
-                      transition-all duration-200
-                    "
+                    className="w-full px-4 py-3 text-[13.5px] bg-[#f0f0ea] text-[#1a1a1a] placeholder:text-[#b0b0a8] rounded-xl border border-transparent outline-none focus:border-[#7fe05b] focus:bg-white transition-all duration-200"
                   />
                   <p className="text-[11px] text-[#b0b0a8] text-right">{judul.length}/100</p>
                 </div>
 
-                {/* ── Deskripsi ── */}
+                {/* ── Keterangan ── */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[11px] font-bold text-[#9a9a9a] uppercase tracking-wide">
                     Deskripsi Lengkap <span className="text-red-400">*</span>
@@ -439,24 +418,17 @@ export default function PengaduanContent({ onMenuClick }: Props) {
                   <textarea
                     rows={5}
                     placeholder="Jelaskan secara detail kejadian, waktu, tempat, dan saksi jika ada..."
-                    value={deskripsi}
-                    onChange={(e) => setDeskripsi(e.target.value)}
-                    className="
-                      w-full px-4 py-3 text-[13.5px]
-                      bg-[#f0f0ea] text-[#1a1a1a] placeholder:text-[#b0b0a8]
-                      rounded-xl border border-transparent outline-none resize-none
-                      focus:border-[#7fe05b] focus:bg-white
-                      transition-all duration-200
-                    "
+                    value={keterangan}
+                    onChange={(e) => setKeterangan(e.target.value)}
+                    className="w-full px-4 py-3 text-[13.5px] bg-[#f0f0ea] text-[#1a1a1a] placeholder:text-[#b0b0a8] rounded-xl border border-transparent outline-none resize-none focus:border-[#7fe05b] focus:bg-white transition-all duration-200"
                   />
                 </div>
 
-                {/* ── Lampiran (opsional) ── */}
+                {/* ── Lampiran (wajib) ── */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[11px] font-bold text-[#9a9a9a] uppercase tracking-wide">
-                    Lampiran <span className="text-[#b0b0a8] font-normal normal-case">(opsional)</span>
+                    Lampiran <span className="text-red-400">*</span>
                   </label>
-
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -464,7 +436,6 @@ export default function PengaduanContent({ onMenuClick }: Props) {
                     className="hidden"
                     onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
                   />
-
                   {file ? (
                     <div className="flex items-center gap-3 bg-[#f0fce8] border-2 border-[#7fe05b] rounded-xl px-4 py-3">
                       <div className="w-9 h-9 rounded-lg bg-[#7fe05b]/20 flex items-center justify-center shrink-0">
@@ -491,7 +462,6 @@ export default function PengaduanContent({ onMenuClick }: Props) {
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      style={{ WebkitTapHighlightColor: "transparent" }}
                       className="flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 border-dashed border-[#d0d0c8] bg-[#fafaf7] hover:border-[#7fe05b] hover:bg-[#f0fce8] transition-all duration-200 active:opacity-70"
                     >
                       <div className="w-9 h-9 rounded-lg bg-[#f0fce8] flex items-center justify-center shrink-0">
@@ -524,14 +494,7 @@ export default function PengaduanContent({ onMenuClick }: Props) {
                   type="button"
                   onClick={handleSubmit}
                   disabled={loading}
-                  style={{ WebkitTapHighlightColor: "transparent" }}
-                  className="
-                    w-full py-4 rounded-2xl
-                    bg-[#111410] hover:bg-[#1e1e16]
-                    disabled:opacity-50 disabled:cursor-not-allowed
-                    flex items-center justify-center gap-2.5
-                    transition-all duration-150 active:scale-[0.99] active:opacity-80
-                  "
+                  className="w-full py-4 rounded-2xl bg-[#111410] hover:bg-[#1e1e16] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2.5 transition-all duration-150 active:scale-[0.99]"
                 >
                   {loading ? (
                     <span className="w-5 h-5 border-[2.5px] border-white/20 border-t-white rounded-full animate-spin" />
@@ -544,7 +507,6 @@ export default function PengaduanContent({ onMenuClick }: Props) {
                     </>
                   )}
                 </button>
-
               </div>
             )}
           </div>
