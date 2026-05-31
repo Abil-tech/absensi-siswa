@@ -325,9 +325,6 @@ export default function LandingPage() {
           <p className="text-[12px] text-[#9a9a9a] text-center">
             © 2025 SMK Citra Negara. Academic Portal v1.0
           </p>
-          <Link href="/login" className="text-[12.5px] font-bold text-[#4a9e2f] hover:underline">
-            Login Portal →
-          </Link>
         </div>
       </footer>
 

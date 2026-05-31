@@ -104,19 +104,6 @@ export default function BkProfilContent({ onMenuClick }: Props) {
           </div>
         </div>
 
-        {/* ── Stat Cards ── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {STATS.map((s, i) => (
-            <div key={i} className="bg-white rounded-2xl p-4 shadow-[0_2px_16px_rgba(0,0,0,0.05)]">
-              <div className="w-8 h-1.5 rounded-full mb-3" style={{ background: s.color }} />
-              <p className="text-[11px] font-semibold text-[#9a9a9a] uppercase tracking-wide">{s.label}</p>
-              <p className="text-[1.8rem] font-black leading-tight mt-1 tracking-tight" style={{ color: s.color }}>
-                {s.value}
-              </p>
-              <p className="text-[11px] text-[#b0b0a8] mt-0.5">{s.sub}</p>
-            </div>
-          ))}
-        </div>
 
         {/* ── Informasi Pribadi ── */}
         <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(0,0,0,0.05)]">

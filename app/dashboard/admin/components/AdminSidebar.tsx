@@ -43,16 +43,6 @@ const navItems = [
       </svg>
     ),
   },
-  {
-    label: "Profil",
-    href: "/dashboard/admin/profil",
-    icon: (active: boolean) => (
-      <svg width="19" height="19" viewBox="0 0 20 20" fill="none">
-        <circle cx="10" cy="7" r="4" fill="currentColor" opacity={active ? "1" : ".8"} />
-        <path d="M2 18c0-4 3.582-7 8-7s8 3 8 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" opacity={active ? "1" : ".8"} />
-      </svg>
-    ),
-  },
 ];
 
 export default function AdminSidebar({ open, onClose }: SidebarProps) {

@@ -143,29 +143,6 @@ export default function AdminDashboardContent({ onMenuClick }: Props) {
           ))}
         </div>
 
-        {/* ── Aktivitas Terbaru ── */}
-        <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(0,0,0,0.05)] overflow-hidden">
-          <div className="px-5 py-4 border-b border-black/5">
-            <h3 className="text-[14px] font-extrabold text-[#1a1a1a]">Aktivitas Terbaru</h3>
-          </div>
-          <div className="divide-y divide-black/[0.04]">
-            {RECENT_ACTIVITY.map((a, i) => (
-              <div key={i} className="flex items-center gap-3 px-5 py-3.5 hover:bg-[#fafaf7] transition-colors">
-                <div
-                  className="w-9 h-9 rounded-full flex items-center justify-center text-base shrink-0"
-                  style={{ background: a.color + "18" }}
-                >
-                  {a.ikon}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-semibold text-[#1a1a1a] truncate">{a.aksi}</p>
-                  <p className="text-[11.5px] text-[#9a9a9a] truncate">{a.nama}</p>
-                </div>
-                <span className="text-[11px] text-[#b0b0a8] font-semibold whitespace-nowrap shrink-0">{a.waktu}</span>
-              </div>
-            ))}
-          </div>
-        </div>
 
       </main>
     </div>
