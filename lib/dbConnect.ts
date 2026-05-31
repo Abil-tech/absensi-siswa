@@ -6,7 +6,6 @@ if (!MONGODB_URI) {
   throw new Error("MONGODB_URI belum didefinisikan di .env.local");
 }
 
-// Cache koneksi untuk menghindari koneksi berulang di Next.js (hot reload)
 interface MongooseCache {
   conn: typeof mongoose | null;
   promise: Promise<typeof mongoose> | null;

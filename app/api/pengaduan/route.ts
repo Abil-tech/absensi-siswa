@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import { requireRole } from "@/lib/auth-helpers";
 import mongoose from "mongoose";
-import PengaduanBK, { KATEGORI_LIST, KategoriPengaduan } from "@/models/PengaduanBK";
+import PengaduanBK, { KATEGORI_LIST, KategoriPengaduan } from "@/models/pengaduanbk";
 import Siswa from "@/models/siswa";
 import Kelas from "@/models/kelas";
 import { uploadToCloudinary } from "@/lib/cloudinaryHelper";
