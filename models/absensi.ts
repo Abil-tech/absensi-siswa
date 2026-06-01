@@ -1,6 +1,6 @@
 import mongoose, { Document, Model, Schema } from "mongoose";
 
-export type StatusAbsensi = "hadir" | "sakit" | "izin";
+export type StatusAbsensi = "hadir" | "terlambat" | "sakit" | "izin";
 
 export interface IAbsensi extends Document {
   siswa: mongoose.Types.ObjectId;
@@ -30,7 +30,7 @@ const AbsensiSchema = new mongoose.Schema<IAbsensi>(
     },
     status: {
       type: String,
-      enum: ["hadir", "sakit", "izin"],
+      enum: ["hadir", "terlambat", "sakit", "izin"],
       required: true,
     },
     file: {

@@ -6,73 +6,82 @@ interface Props {
   onMenuClick: () => void;
 }
 
-type FilterType = "Semua" | "Hadir" | "Absen" | "Terlambat";
+type StatusAbsensi = "hadir" | "sakit" | "izin";
 
-const SUBJECTS = [
-  {
-    name: "Matematika",
-    teacher: "Bpk. Hendra K.",
-    lastCheckin: "07:58",
-    monthlyAvg: 96,
-    status: "Hadir" as const,
-    initials: "MT",
-    color: "#3b82f6",
-  },
-  {
-    name: "Bahasa Indonesia",
-    teacher: "Ibu Sari M.",
-    lastCheckin: "09:15",
-    monthlyAvg: 88,
-    status: "Hadir" as const,
-    initials: "BI",
-    color: "#8b5cf6",
-  },
-  {
-    name: "IPA Fisika",
-    teacher: "Bpk. Danu W.",
-    lastCheckin: "11:02",
-    monthlyAvg: 72,
-    status: "Terlambat" as const,
-    initials: "FS",
-    color: "#f59e0b",
-  },
-  {
-    name: "Bahasa Inggris",
-    teacher: "Ibu Reni A.",
-    lastCheckin: "-",
-    monthlyAvg: 60,
-    status: "Absen" as const,
-    initials: "EN",
-    color: "#ef4444",
-  },
-];
+interface AbsensiItem {
+  id: string;
+  tanggal: string;
+  waktu: string;
+  status: StatusAbsensi;
+  keterangan: string;
+}
 
-const RECENT_ISSUES = [
-  { label: "Terlambat 10 menit (Fisika)", dot: "#f59e0b", time: "2H lalu" },
-  { label: "Alfa tidak keterangan (B.Inggris)", dot: "#ef4444", time: "Kemarin" },
-  { label: "Hadir tepat waktu (Matematika)", dot: "#7fe05b", time: "Hari ini" },
-];
+interface Stats {
+  hadir: number;
+  sakit: number;
+  izin: number;
+  total: number;
+}
 
-const STATUS_STYLE: Record<string, string> = {
-  Hadir: "bg-[#7fe05b] text-[#111410]",
-  Absen: "border border-gray-300 text-gray-700 bg-white",
-  Terlambat: "bg-[#111410] text-[#7fe05b]",
+interface SiswaData {
+  nama: string;
+  nis: string;
+  kelas: string;
+  jurusan: string;
+}
+
+const STATUS_STYLE: Record<StatusAbsensi, string> = {
+  hadir: "bg-[#7fe05b] text-[#111410]",
+  sakit: "bg-red-100 text-red-700",
+  izin:  "border border-gray-300 text-gray-700 bg-white",
 };
 
-const AVG_COLOR = (avg: number) =>
-  avg >= 90 ? "#4a9e2f" : avg >= 75 ? "#555" : "#ef4444";
+const STATUS_LABEL: Record<StatusAbsensi, string> = {
+  hadir: "Hadir",
+  sakit: "Sakit",
+  izin:  "Izin",
+};
 
-const AVG_BAR = (avg: number) =>
-  avg >= 90 ? "#7fe05b" : avg >= 75 ? "#111410" : "#ef4444";
+function formatTanggal(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+}
 
-const AVG_LABEL = (avg: number) =>
-  avg >= 90 ? "excellent" : avg >= 75 ? "steady" : "critical";
+export default function SiswaDashboardContent({ onMenuClick }: Props) {
+  const [siswa, setSiswa]                     = useState<SiswaData | null>(null);
+  const [stats, setStats]                     = useState<Stats | null>(null);
+  const [absensiList, setAbsensiList]         = useState<AbsensiItem[]>([]);
+  const [sudahAbsen, setSudahAbsen]           = useState(false);
+  const [bisaAbsen, setBisaAbsen]             = useState(false);
+  const [loading, setLoading]                 = useState(true);
+  const [error, setError]                     = useState<string | null>(null);
 
-export default function DashboardContent({ onMenuClick }: Props) {
-  const [filter, setFilter] = useState<FilterType>("Semua");
-
-  const filtered =
-    filter === "Semua" ? SUBJECTS : SUBJECTS.filter((s) => s.status === filter);
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const res = await fetch("/api/siswa/absensi");
+        if (!res.ok) {
+          const json = await res.json();
+          setError(json.error ?? "Gagal memuat data");
+          return;
+        }
+        const json = await res.json();
+        setSiswa(json.siswa);
+        setStats(json.stats);
+        setAbsensiList(json.absensi);
+        setSudahAbsen(json.sudahAbsenHariIni);
+        setBisaAbsen(json.bisaAbsen);
+      } catch {
+        setError("Gagal terhubung ke server");
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, []);
 
   const persentaseHadir = stats && stats.total > 0
     ? ((stats.hadir / stats.total) * 100).toFixed(1)
@@ -93,22 +102,11 @@ export default function DashboardContent({ onMenuClick }: Props) {
             Dashboard
           </h1>
         </div>
-
-        <div className="flex items-center gap-2">
+        {siswa && (
           <div className="hidden sm:flex items-center gap-1.5 bg-white border border-black/10 rounded-full px-3 py-1.5 text-[12.5px] font-semibold text-[#1a1a1a] shadow-sm">
-            Kelas X-A
-            <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-              <path d="M3 5l4 4 4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-            </svg>
+            {siswa.kelas}
           </div>
-          <button className="relative w-9 h-9 flex items-center justify-center rounded-full bg-white border border-black/10 text-[#1a1a1a] hover:bg-black/5 transition">
-            <svg width="17" height="17" viewBox="0 0 18 18" fill="none">
-              <path d="M9 2a5 5 0 00-5 5v3l-1.5 2H15.5L14 10V7a5 5 0 00-5-5Z" stroke="currentColor" strokeWidth="1.5" />
-              <path d="M7 14a2 2 0 004 0" stroke="currentColor" strokeWidth="1.5" />
-            </svg>
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#7fe05b] rounded-full ring-1 ring-[#f5f5ef]" />
-          </button>
-        </div>
+        )}
       </header>
 
       <main className="flex-1 px-4 sm:px-6 lg:px-8 py-5 sm:py-7 flex flex-col gap-5">

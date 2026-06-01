@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 interface Props {
   onMenuClick: () => void;
 }
 
-type StatusType = "Hadir" | "Izin" | "Sakit";
+type StatusType = "hadir" | "izin" | "sakit";
 
 const STATUS_OPTIONS: {
   value: StatusType;
@@ -16,7 +16,7 @@ const STATUS_OPTIONS: {
   icon: React.ReactNode;
 }[] = [
   {
-    value: "Hadir",
+    value: "hadir",
     label: "Hadir",
     activeClass: "bg-[#7fe05b] text-[#111410] border-[#7fe05b]",
     activeBg: "bg-[#7fe05b]",
@@ -28,7 +28,7 @@ const STATUS_OPTIONS: {
     ),
   },
   {
-    value: "Izin",
+    value: "izin",
     label: "Izin",
     activeClass: "bg-[#3b82f6] text-white border-[#3b82f6]",
     activeBg: "bg-[#3b82f6]",
@@ -42,7 +42,7 @@ const STATUS_OPTIONS: {
     ),
   },
   {
-    value: "Sakit",
+    value: "sakit",
     label: "Sakit",
     activeClass: "bg-[#ef4444] text-white border-[#ef4444]",
     activeBg: "bg-[#ef4444]",
@@ -56,31 +56,43 @@ const STATUS_OPTIONS: {
 ];
 
 export default function KehadiranContent({ onMenuClick }: Props) {
-  const [status, setStatus] = useState<StatusType>("Hadir");
-  const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [status, setStatus]       = useState<StatusType>("hadir");
+  const [keterangan, setKeterangan] = useState("");
+  const [file, setFile]           = useState<File | null>(null);
+  const [preview, setPreview]     = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading]     = useState(false);
+  const [error, setError]         = useState<string | null>(null);
+  const [kelasNama, setKelasNama] = useState<string>("—");
+  const [sudahAbsen, setSudahAbsen] = useState(false);
+  const [bisaAbsen, setBisaAbsen] = useState(true);
+  const [loadingCek, setLoadingCek] = useState(true);
 
-  // Dua ref terpisah: kamera (selfie) dan file biasa
   const cameraInputRef = useRef<HTMLInputElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef   = useRef<HTMLInputElement>(null);
 
   const now = new Date();
-  const tanggal = now.toLocaleDateString("id-ID", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-  const waktu =
-    now.toLocaleTimeString("id-ID", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    }) + " WIB";
+  const tanggal = now.toLocaleDateString("id-ID", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const waktu = now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", hour12: false }) + " WIB";
+
+  // Cek status absensi hari ini
+  useEffect(() => {
+    async function cekAbsensi() {
+      try {
+        const res = await fetch("/api/siswa/absensi");
+        if (!res.ok) return;
+        const json = await res.json();
+        setKelasNama(json.siswa?.kelas ?? "—");
+        setSudahAbsen(json.sudahAbsenHariIni);
+        setBisaAbsen(json.bisaAbsen);
+      } finally {
+        setLoadingCek(false);
+      }
+    }
+    cekAbsensi();
+  }, []);
 
   function handleStatusChange(s: StatusType) {
-    // Reset file saat ganti status
     if (s !== status) {
       setFile(null);
       setPreview(null);
@@ -88,21 +100,22 @@ export default function KehadiranContent({ onMenuClick }: Props) {
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
     setStatus(s);
+    setError(null);
   }
 
   function handleFileChange(f: File | null) {
     if (!f) return;
     const allowed = ["image/jpeg", "image/jpg", "image/png", "image/webp", "application/pdf"];
     if (!allowed.includes(f.type)) {
-      alert("Format tidak didukung. Gunakan JPG, PNG, atau PDF.");
+      setError("Format tidak didukung. Gunakan JPG, PNG, atau PDF.");
       return;
     }
     if (f.size > 10 * 1024 * 1024) {
-      alert("Ukuran file maksimal 10MB.");
+      setError("Ukuran file maksimal 10MB.");
       return;
     }
     setFile(f);
-    // Preview hanya untuk gambar
+    setError(null);
     if (f.type.startsWith("image/")) {
       setPreview(URL.createObjectURL(f));
     } else {
@@ -118,7 +131,7 @@ export default function KehadiranContent({ onMenuClick }: Props) {
   }
 
   function openInput() {
-    if (status === "Hadir") {
+    if (status === "hadir") {
       cameraInputRef.current?.click();
     } else {
       fileInputRef.current?.click();
@@ -126,77 +139,93 @@ export default function KehadiranContent({ onMenuClick }: Props) {
   }
 
   async function handleSubmit() {
-    if (!file) {
-      alert(
-        status === "Hadir"
-          ? "Harap ambil selfie terlebih dahulu."
-          : "Harap unggah dokumen pendukung terlebih dahulu."
-      );
-      return;
-    }
+    setError(null);
+
+    if (!file)            { setError(status === "hadir" ? "Harap ambil selfie terlebih dahulu." : "Harap unggah dokumen pendukung."); return; }
+    if (!keterangan.trim()) { setError("Keterangan wajib diisi."); return; }
+
     setLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append("status",     status);
+      formData.append("keterangan", keterangan);
+      formData.append("file",       file);
 
-    // Sambungkan ke API kamu:
-    // const formData = new FormData();
-    // formData.append("status", status);
-    // formData.append("file", file);
-    // await fetch("/api/kehadiran", { method: "POST", body: formData });
+      const res = await fetch("/api/siswa/absensi", { method: "POST", body: formData });
+      const json = await res.json();
 
-    await new Promise((r) => setTimeout(r, 1500));
-    setLoading(false);
-    setSubmitted(true);
-  }
+      if (!res.ok) {
+        setError(json.error ?? "Gagal mengirim absensi.");
+        return;
+      }
 
-  function handleReset() {
-    setSubmitted(false);
-    setFile(null);
-    setPreview(null);
-    setStatus("Hadir");
+      setSubmitted(true);
+      setSudahAbsen(true);
+    } catch {
+      setError("Gagal terhubung ke server.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   const selectedOpt = STATUS_OPTIONS.find((s) => s.value === status)!;
 
-  // Label & hint teks sesuai status
-  const uploadLabel =
-    status === "Hadir" ? "Foto Selfie" : "Dokumen / Surat Pendukung";
-  const uploadHint =
-    status === "Hadir"
-      ? "Klik untuk membuka kamera — pastikan wajah terlihat jelas"
-      : "Klik untuk mengunggah surat izin/sakit · JPG, PNG, PDF (Maks. 10MB)";
-  const uploadIcon =
-    status === "Hadir" ? (
-      // Kamera icon
-      <svg width="32" height="32" viewBox="0 0 32 32" fill="none" className="text-[#7fe05b]">
-        <path
-          d="M28 24a2 2 0 01-2 2H6a2 2 0 01-2-2V12a2 2 0 012-2h3.5l2-3h9l2 3H26a2 2 0 012 2v12z"
-          stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"
-        />
-        <circle cx="16" cy="17" r="4" stroke="currentColor" strokeWidth="1.8" />
-      </svg>
-    ) : (
-      // Upload icon
-      <svg width="32" height="32" viewBox="0 0 32 32" fill="none" className="text-[#7fe05b]">
-        <path d="M16 20V10M16 10l-5 5M16 10l5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M8 24h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-        <rect x="4" y="4" width="24" height="24" rx="4" stroke="currentColor" strokeWidth="1.4" opacity=".2" />
-      </svg>
-    );
-
-  return (
-    <div className="flex-1 flex flex-col min-h-screen overflow-y-auto">
-
-      {/* ── Topbar ── */}
-      <header className="sticky top-0 z-10 flex items-center justify-between px-4 sm:px-6 lg:px-8 h-16 bg-[#f5f5ef]/90 backdrop-blur border-b border-black/5">
-        <div className="flex items-center gap-3">
-          <button onClick={onMenuClick} className="lg:hidden text-[#1a1a1a]" aria-label="Buka menu">
+  // Jika sudah absen atau waktu habis — tampilkan info
+  if (!loadingCek && (sudahAbsen || !bisaAbsen) && !submitted) {
+    return (
+      <div className="flex-1 flex flex-col min-h-screen overflow-y-auto">
+        <header className="sticky top-0 z-10 flex items-center gap-3 px-4 sm:px-6 lg:px-8 h-16 bg-[#f5f5ef]/90 backdrop-blur border-b border-black/5">
+          <button onClick={onMenuClick} className="lg:hidden text-[#1a1a1a] p-1">
             <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
               <path d="M3 6h16M3 11h16M3 16h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
             </svg>
           </button>
-          <h1 className="text-[1.15rem] sm:text-[1.5rem] font-extrabold text-[#1a1a1a] tracking-tight">
-            Absensi Kehadiran
-          </h1>
+          <h1 className="text-[1.15rem] sm:text-[1.5rem] font-extrabold text-[#1a1a1a] tracking-tight">Absensi Kehadiran</h1>
+        </header>
+        <main className="flex-1 flex items-center justify-center px-4 py-12">
+          <div className="bg-white rounded-2xl shadow-[0_2px_24px_rgba(0,0,0,0.06)] p-10 flex flex-col items-center text-center gap-4 max-w-sm w-full">
+            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${sudahAbsen ? "bg-[#7fe05b]" : "bg-gray-200"}`}>
+              <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                {sudahAbsen
+                  ? <path d="M6 14l5 5 11-11" stroke="#111410" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                  : <path d="M14 8v7M14 18.5h.01" stroke="#6b6b6b" strokeWidth="2" strokeLinecap="round" />
+                }
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-[1.2rem] font-extrabold text-[#1a1a1a]">
+                {sudahAbsen ? "Sudah Absen Hari Ini" : "Waktu Absen Habis"}
+              </h2>
+              <p className="text-[13px] text-[#9a9a9a] mt-1.5">
+                {sudahAbsen
+                  ? "Kehadiranmu sudah tercatat untuk hari ini."
+                  : "Batas waktu absensi adalah jam 06.40. Silakan absen besok."}
+              </p>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 flex flex-col min-h-screen overflow-y-auto">
+      <header className="sticky top-0 z-10 flex items-center justify-between px-4 sm:px-6 lg:px-8 h-16 bg-[#f5f5ef]/90 backdrop-blur border-b border-black/5">
+        <div className="flex items-center gap-3">
+          <button onClick={onMenuClick} className="lg:hidden text-[#1a1a1a] p-1" aria-label="Buka menu">
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+              <path d="M3 6h16M3 11h16M3 16h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+          </button>
+          <h1 className="text-[1.15rem] sm:text-[1.5rem] font-extrabold text-[#1a1a1a] tracking-tight">Absensi Kehadiran</h1>
         </div>
+        <button className="relative w-9 h-9 flex items-center justify-center rounded-full bg-white border border-black/10 text-[#1a1a1a]">
+          <svg width="17" height="17" viewBox="0 0 18 18" fill="none">
+            <path d="M9 2a5 5 0 00-5 5v3l-1.5 2H15.5L14 10V7a5 5 0 00-5-5Z" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M7 14a2 2 0 004 0" stroke="currentColor" strokeWidth="1.5" />
+          </svg>
+          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#7fe05b] rounded-full ring-1 ring-[#f5f5ef]" />
+        </button>
       </header>
 
       <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
@@ -214,48 +243,36 @@ export default function KehadiranContent({ onMenuClick }: Props) {
                 <div>
                   <h2 className="text-[1.3rem] font-extrabold text-[#1a1a1a]">Kehadiran Terkirim!</h2>
                   <p className="text-[#9a9a9a] text-sm mt-1.5">
-                    Status <span className="font-bold text-[#1a1a1a]">{status}</span> berhasil dicatat
+                    Status <span className="font-bold text-[#1a1a1a] capitalize">{status}</span> berhasil dicatat
                   </p>
                   <p className="text-[#b0b0a8] text-[12.5px] mt-0.5">{tanggal} · {waktu}</p>
                 </div>
                 {preview && (
-                  <div className="relative">
-                    <img
-                      src={preview}
-                      alt="Bukti"
-                      className="w-36 h-36 object-cover rounded-2xl border-4 shadow-md"
-                      style={{ borderColor: status === "Hadir" ? "#7fe05b" : status === "Izin" ? "#3b82f6" : "#ef4444" }}
-                    />
-                    <span
-                      className="absolute -bottom-2 left-1/2 -translate-x-1/2 text-white text-[10.5px] font-black px-3 py-1 rounded-full whitespace-nowrap"
-                      style={{ background: status === "Hadir" ? "#4a9e2f" : status === "Izin" ? "#1d4ed8" : "#b91c1c" }}
-                    >
-                      ✓ Terverifikasi
-                    </span>
-                  </div>
+                  <img src={preview} alt="Bukti" className="w-36 h-36 object-cover rounded-2xl border-4 shadow-md" style={{ borderColor: status === "hadir" ? "#7fe05b" : status === "izin" ? "#3b82f6" : "#ef4444" }} />
                 )}
-                <button
-                  onClick={handleReset}
-                  className="mt-4 px-6 py-3 bg-[#111410] text-white rounded-full text-[13.5px] font-bold hover:bg-[#2a2a1e] transition"
-                >
-                  Kirim Ulang Absensi
-                </button>
               </div>
 
             ) : (
               <div className="p-5 sm:p-8 flex flex-col gap-6">
 
-                {/* ── Card header ── */}
+                {/* Header */}
                 <div className="flex items-center justify-between">
-                  <h2 className="text-[1.2rem] sm:text-[1.35rem] font-extrabold text-[#1a1a1a]">
-                    Kirim Kehadiran
-                  </h2>
-                  <span className="px-3 py-1.5 bg-[#7fe05b] text-[#111410] text-[12px] font-black rounded-full">
-                    XI-1 PPLG
-                  </span>
+                  <h2 className="text-[1.2rem] sm:text-[1.35rem] font-extrabold text-[#1a1a1a]">Kirim Kehadiran</h2>
+                  <span className="px-3 py-1.5 bg-[#7fe05b] text-[#111410] text-[12px] font-black rounded-full">{kelasNama}</span>
                 </div>
 
-                {/* ── 3 Status Buttons ── */}
+                {/* Error */}
+                {error && (
+                  <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 text-[13px] font-medium rounded-xl px-4 py-3">
+                    <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+                      <circle cx="8" cy="8" r="7" stroke="#c0392b" strokeWidth="1.5" />
+                      <path d="M8 5v3.5M8 11h.01" stroke="#c0392b" strokeWidth="1.5" strokeLinecap="round" />
+                    </svg>
+                    {error}
+                  </div>
+                )}
+
+                {/* Status buttons */}
                 <div className="grid grid-cols-3 gap-3">
                   {STATUS_OPTIONS.map((opt) => {
                     const active = status === opt.value;
@@ -263,19 +280,9 @@ export default function KehadiranContent({ onMenuClick }: Props) {
                       <button
                         key={opt.value}
                         onClick={() => handleStatusChange(opt.value)}
-                        className={`
-                          relative flex flex-col items-center justify-center gap-2
-                          py-5 sm:py-6 rounded-2xl border-2 font-bold text-[14px]
-                          transition-all duration-200
-                          ${active
-                            ? opt.activeClass + " shadow-md scale-[1.02]"
-                            : "border-[#e8e8e0] bg-[#f9f9f5] text-[#9a9a9a] hover:border-[#d0d0c8] hover:bg-[#f0f0ea]"
-                          }
-                        `}
+                        className={`relative flex flex-col items-center justify-center gap-2 py-5 sm:py-6 rounded-2xl border-2 font-bold text-[14px] transition-all duration-200 ${active ? opt.activeClass + " shadow-md scale-[1.02]" : "border-[#e8e8e0] bg-[#f9f9f5] text-[#9a9a9a] hover:border-[#d0d0c8]"}`}
                       >
-                        <span className={active ? "text-current" : "text-[#c0c0b8]"}>
-                          {opt.icon}
-                        </span>
+                        <span className={active ? "text-current" : "text-[#c0c0b8]"}>{opt.icon}</span>
                         {opt.label}
                         {active && (
                           <span className="absolute top-2.5 right-2.5 w-5 h-5 bg-white/30 rounded-full flex items-center justify-center">
@@ -289,41 +296,24 @@ export default function KehadiranContent({ onMenuClick }: Props) {
                   })}
                 </div>
 
-                {/* Hint per status */}
                 <p className="text-[12.5px] text-[#9a9a9a] -mt-2 px-1">
-                  {status === "Hadir" && "📸 Wajib selfie sebagai bukti kehadiran."}
-                  {status === "Izin" && "📄 Unggah surat izin dari orang tua / wali."}
-                  {status === "Sakit" && "🏥 Unggah surat keterangan sakit dari dokter."}
+                  {status === "hadir" && "📸 Wajib selfie sebagai bukti kehadiran."}
+                  {status === "izin"  && "📄 Unggah surat izin dari orang tua / wali."}
+                  {status === "sakit" && "🏥 Unggah surat keterangan sakit dari dokter."}
                 </p>
 
-                {/* ── Hidden inputs ── */}
-                {/* Selfie: buka kamera depan (mobile) */}
-                <input
-                  ref={cameraInputRef}
-                  type="file"
-                  accept="image/*"
-                  capture="user"
-                  className="hidden"
-                  onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
-                />
-                {/* File biasa: foto atau PDF */}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/webp,application/pdf"
-                  className="hidden"
-                  onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
-                />
+                {/* Hidden inputs */}
+                <input ref={cameraInputRef} type="file" accept="image/*" capture="user" className="hidden" onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)} />
+                <input ref={fileInputRef} type="file" accept="image/jpeg,image/jpg,image/png,image/webp,application/pdf" className="hidden" onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)} />
 
-                {/* ── Tanggal & Waktu ── */}
+                {/* Tanggal & Waktu */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[11.5px] font-bold text-[#9a9a9a] uppercase tracking-wide">Tanggal</label>
                     <div className="flex items-center gap-2 bg-[#f0f0ea] rounded-xl px-4 py-3">
                       <svg width="15" height="15" viewBox="0 0 18 18" fill="none" className="text-[#9a9a9a] shrink-0">
                         <rect x="2" y="3" width="14" height="13" rx="2" stroke="currentColor" strokeWidth="1.4" />
-                        <path d="M2 7h14" stroke="currentColor" strokeWidth="1.4" />
-                        <path d="M6 2v2M12 2v2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                        <path d="M2 7h14M6 2v2M12 2v2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
                       </svg>
                       <span className="text-[13px] font-semibold text-[#1a1a1a]">{tanggal}</span>
                     </div>
@@ -340,21 +330,16 @@ export default function KehadiranContent({ onMenuClick }: Props) {
                   </div>
                 </div>
 
-                {/* ── Upload Area ── */}
+                {/* Upload */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[11.5px] font-bold text-[#9a9a9a] uppercase tracking-wide">
-                    {uploadLabel}
+                    {status === "hadir" ? "Foto Selfie" : "Dokumen / Surat Pendukung"} <span className="text-red-400">*</span>
                   </label>
-
                   {file ? (
-                    /* Preview */
-                    <div className="relative rounded-2xl overflow-hidden border-2"
-                      style={{ borderColor: status === "Hadir" ? "#7fe05b" : status === "Izin" ? "#3b82f6" : "#ef4444" }}
-                    >
+                    <div className="relative rounded-2xl overflow-hidden border-2" style={{ borderColor: status === "hadir" ? "#7fe05b" : status === "izin" ? "#3b82f6" : "#ef4444" }}>
                       {preview ? (
                         <img src={preview} alt="Preview" className="w-full max-h-64 object-cover" />
                       ) : (
-                        /* PDF preview */
                         <div className="flex items-center gap-3 bg-[#f9f9f5] px-5 py-6">
                           <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center shrink-0">
                             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" className="text-red-500">
@@ -364,82 +349,71 @@ export default function KehadiranContent({ onMenuClick }: Props) {
                           </div>
                           <div className="min-w-0">
                             <p className="text-[13.5px] font-bold text-[#1a1a1a] truncate">{file.name}</p>
-                            <p className="text-[12px] text-[#9a9a9a]">{((file.size) / 1024).toFixed(0)} KB · PDF</p>
+                            <p className="text-[12px] text-[#9a9a9a]">{(file.size / 1024).toFixed(0)} KB · PDF</p>
                           </div>
                         </div>
                       )}
-
-                      {/* Bottom bar */}
                       <div className="absolute bottom-0 left-0 right-0 bg-black/50 px-4 py-2.5 flex items-center justify-between">
                         <span className="text-white text-[12px] font-semibold truncate">{file.name}</span>
-                        <button onClick={removeFile} className="text-white/70 hover:text-white transition shrink-0 ml-2" aria-label="Hapus">
+                        <button onClick={removeFile} className="text-white/70 hover:text-white transition shrink-0 ml-2">
                           <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
                             <circle cx="9" cy="9" r="8" fill="rgba(0,0,0,0.4)" />
                             <path d="M6 6l6 6M12 6l-6 6" stroke="white" strokeWidth="1.6" strokeLinecap="round" />
                           </svg>
                         </button>
                       </div>
-
-                      {/* Retake / Ganti */}
-                      <button
-                        onClick={openInput}
-                        className="absolute top-3 right-3 bg-white/90 hover:bg-white text-[#111410] text-[11.5px] font-bold px-3 py-1.5 rounded-full transition"
-                      >
-                        {status === "Hadir" ? "Ulangi Selfie" : "Ganti File"}
+                      <button onClick={openInput} className="absolute top-3 right-3 bg-white/90 hover:bg-white text-[#111410] text-[11.5px] font-bold px-3 py-1.5 rounded-full transition">
+                        {status === "hadir" ? "Ulangi Selfie" : "Ganti File"}
                       </button>
                     </div>
                   ) : (
-                    /* Upload trigger */
-                    <button
-                      onClick={openInput}
-                      className="
-                        w-full flex flex-col items-center justify-center gap-3
-                        rounded-2xl border-2 border-dashed border-[#d0d0c8]
-                        bg-[#fafaf7] hover:border-[#7fe05b] hover:bg-[#f0fce8]
-                        py-10 sm:py-12 px-6 text-center
-                        transition-all duration-200 group
-                      "
-                    >
+                    <button onClick={openInput} className="w-full flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-[#d0d0c8] bg-[#fafaf7] hover:border-[#7fe05b] hover:bg-[#f0fce8] py-10 sm:py-12 px-6 text-center transition-all duration-200 group">
                       <div className="w-16 h-16 rounded-full bg-[#f0fce8] group-hover:bg-[#7fe05b]/20 flex items-center justify-center transition-colors">
-                        {uploadIcon}
+                        {status === "hadir" ? (
+                          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" className="text-[#7fe05b]">
+                            <path d="M28 24a2 2 0 01-2 2H6a2 2 0 01-2-2V12a2 2 0 012-2h3.5l2-3h9l2 3H26a2 2 0 012 2v12z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+                            <circle cx="16" cy="17" r="4" stroke="currentColor" strokeWidth="1.8" />
+                          </svg>
+                        ) : (
+                          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" className="text-[#7fe05b]">
+                            <path d="M16 20V10M16 10l-5 5M16 10l5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            <path d="M8 24h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                          </svg>
+                        )}
                       </div>
                       <div>
-                        <p className="text-[13.5px] font-bold text-[#1a1a1a]">
-                          {status === "Hadir" ? "Ambil Selfie" : "Unggah Dokumen"}
+                        <p className="text-[13.5px] font-bold text-[#1a1a1a]">{status === "hadir" ? "Ambil Selfie" : "Unggah Dokumen"}</p>
+                        <p className="text-[12px] text-[#9a9a9a] mt-1">
+                          {status === "hadir" ? "Klik untuk membuka kamera — pastikan wajah terlihat jelas" : "Klik untuk mengunggah surat · JPG, PNG, PDF (Maks. 10MB)"}
                         </p>
-                        <p className="text-[12px] text-[#9a9a9a] mt-1">{uploadHint}</p>
                       </div>
                     </button>
                   )}
                 </div>
 
-                {/* ── Catatan ── */}
+                {/* Keterangan — wajib */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[11.5px] font-bold text-[#9a9a9a] uppercase tracking-wide">
-                    Catatan <span className="normal-case font-normal text-[#c0c0b8]">(opsional)</span>
+                    Keterangan <span className="text-red-400">*</span>
                   </label>
                   <textarea
                     rows={2}
-                    placeholder="Tambahkan keterangan jika diperlukan..."
-                    className="
-                      w-full px-4 py-3 text-[13.5px]
-                      bg-[#f0f0ea] text-[#1a1a1a] placeholder:text-[#b0b0a8]
-                      rounded-xl border border-transparent outline-none resize-none
-                      focus:border-[#7fe05b] focus:bg-white transition-all duration-200
-                    "
+                    placeholder={
+                      status === "hadir" ? "Contoh: Hadir tepat waktu" :
+                      status === "izin"  ? "Contoh: Izin keperluan keluarga" :
+                      "Contoh: Demam sejak kemarin malam"
+                    }
+                    value={keterangan}
+                    onChange={(e) => setKeterangan(e.target.value)}
+                    className="w-full px-4 py-3 text-[13.5px] bg-[#f0f0ea] text-[#1a1a1a] placeholder:text-[#b0b0a8] rounded-xl border border-transparent outline-none resize-none focus:border-[#7fe05b] focus:bg-white transition-all duration-200"
                   />
                 </div>
 
-                {/* ── Submit ── */}
+                {/* Submit */}
                 <button
                   onClick={handleSubmit}
                   disabled={loading || !file}
-                  className="
-                    w-full py-4 rounded-2xl bg-[#111410] hover:bg-[#1e1e16]
-                    disabled:opacity-50 disabled:cursor-not-allowed
-                    flex items-center justify-center gap-2.5
-                    transition-all duration-150 active:scale-[0.99]
-                  "
+                  className="w-full py-4 rounded-2xl bg-[#111410] hover:bg-[#1e1e16] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2.5 transition-all duration-150 active:scale-[0.99]"
                 >
                   {loading ? (
                     <span className="w-5 h-5 border-[2.5px] border-white/20 border-t-white rounded-full animate-spin" />
@@ -455,12 +429,9 @@ export default function KehadiranContent({ onMenuClick }: Props) {
 
                 {!file && (
                   <p className="text-center text-[12px] text-[#b0b0a8]">
-                    {status === "Hadir"
-                      ? "* Ambil selfie terlebih dahulu sebelum mengirim"
-                      : "* Unggah dokumen pendukung terlebih dahulu"}
+                    {status === "hadir" ? "* Ambil selfie terlebih dahulu sebelum mengirim" : "* Unggah dokumen pendukung terlebih dahulu"}
                   </p>
                 )}
-
               </div>
             )}
           </div>

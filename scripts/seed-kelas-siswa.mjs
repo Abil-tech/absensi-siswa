@@ -34,6 +34,20 @@ const KELAS_LIST = [
   { nama: "11 PM 2" },
   { nama: "12 PM 1" },
   { nama: "12 PM 2" },
+
+  { nama: "10 TJKT 1" },
+  { nama: "10 TJKT 2" },
+  { nama: "11 TJKT 1" },
+  { nama: "11 TJKT 2" },
+  { nama: "12 TJKT 1" },
+  { nama: "12 TJKT 2" },
+
+  { nama: "10 MPLB 1" },
+  { nama: "10 MPLB 2" },
+  { nama: "11 MPLB 1" },
+  { nama: "11 MPLB 2" },
+  { nama: "12 MPLB 1" },
+  { nama: "12 MPLB 2" },
   
 ];
 

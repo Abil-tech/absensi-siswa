@@ -1,6 +1,23 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 interface Props { onMenuClick: () => void; }
+
+interface DashboardData {
+  siswa: number;
+  staf: number;
+  kelas: number;
+  jurusan: number;
+  guruAktif: number;
+  stafAdmin: number;
+  kehadiran: {
+    persentase: number;
+    hadir: number;
+    terlambat: number;
+    tidakHadir: number;
+  };
+}
 
 const now = new Date();
 const jamSekarang = now.getHours();
@@ -9,15 +26,24 @@ const statusWaktu =
   jamSekarang < 14 ? "Siang Hari" :
   jamSekarang < 18 ? "Sore Hari" : "Malam Hari";
 
-const RECENT_ACTIVITY = [
-  { aksi: "Siswa baru didaftarkan", nama: "Adi Nugroho", waktu: "2 menit lalu",    ikon: "👤", color: "#3b82f6" },
-  { aksi: "Data guru diperbarui",   nama: "Dr. Sarah Jenkins", waktu: "15 menit lalu", ikon: "✏️", color: "#f59e0b" },
-  { aksi: "Siswa baru didaftarkan", nama: "Bella Permata", waktu: "1 jam lalu",    ikon: "👤", color: "#3b82f6" },
-  { aksi: "Akun guru dibuat",       nama: "Bpk. Hendra K.", waktu: "2 jam lalu",   ikon: "🔑", color: "#8b5cf6" },
-  { aksi: "Data siswa dihapus",     nama: "Lina Octavia", waktu: "3 jam lalu",     ikon: "🗑️", color: "#ef4444" },
-];
+function fmt(n: number): string {
+  return n.toLocaleString("id-ID");
+}
 
 export default function AdminDashboardContent({ onMenuClick }: Props) {
+  const [data, setData]       = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/admin/dashboard")
+      .then((r) => r.json())
+      .then(setData)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  const d = data;
+
   return (
     <div className="flex-1 flex flex-col min-h-screen overflow-y-auto">
 
@@ -54,9 +80,10 @@ export default function AdminDashboardContent({ onMenuClick }: Props) {
                   <path d="M6 13V19C6 19 9 22 14 22C19 22 22 19 22 19V13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                 </svg>
               </div>
-              <span className="text-[13px] font-bold text-[#4a9e2f]">+12%</span>
             </div>
-            <p className="text-[2.8rem] font-black text-[#1a1a1a] leading-none tracking-tight">1,248</p>
+            <p className="text-[2.8rem] font-black text-[#1a1a1a] leading-none tracking-tight">
+              {loading ? "—" : fmt(d?.siswa ?? 0)}
+            </p>
             <p className="text-[14px] font-bold text-[#1a1a1a] mt-2">Jumlah Siswa</p>
           </div>
 
@@ -71,20 +98,23 @@ export default function AdminDashboardContent({ onMenuClick }: Props) {
               </div>
               <span className="text-[13px] font-bold text-[#4a9e2f]">Aktif</span>
             </div>
-            <p className="text-[2.8rem] font-black text-[#1a1a1a] leading-none tracking-tight">84</p>
+            <p className="text-[2.8rem] font-black text-[#1a1a1a] leading-none tracking-tight">
+              {loading ? "—" : fmt(d?.staf ?? 0)}
+            </p>
             <p className="text-[14px] font-bold text-[#1a1a1a] mt-2">Anggota Staf</p>
           </div>
         </div>
 
         {/* ── Kehadiran Hari Ini — dark card ── */}
         <div className="bg-[#111410] rounded-2xl p-6 sm:p-8 shadow-[0_4px_24px_rgba(0,0,0,0.15)] relative overflow-hidden">
-          {/* Decorative glow */}
           <div className="absolute top-0 right-0 w-48 h-48 bg-[#7fe05b]/10 rounded-full blur-3xl pointer-events-none" />
 
           <div className="flex items-start justify-between">
             <div>
               <p className="text-white/50 text-[14px] font-semibold mb-3">Kehadiran Hari Ini</p>
-              <p className="text-[3.5rem] sm:text-[4rem] font-black text-[#7fe05b] leading-none tracking-tight">94.2%</p>
+              <p className="text-[3.5rem] sm:text-[4rem] font-black text-[#7fe05b] leading-none tracking-tight">
+                {loading ? "—" : `${d?.kehadiran.persentase ?? 0}%`}
+              </p>
             </div>
             <div className="flex flex-col items-end gap-2">
               <div className="w-12 h-12 rounded-xl bg-[#7fe05b]/15 flex items-center justify-center">
@@ -95,14 +125,19 @@ export default function AdminDashboardContent({ onMenuClick }: Props) {
                   <path d="M8 17h4M8 21h6M16 17h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
                 </svg>
               </div>
-              <span className="text-[#7fe05b] text-[13px] font-bold">Data Normal</span>
+              <span className="text-[#7fe05b] text-[13px] font-bold">
+                {loading ? "—" : (d?.kehadiran.persentase ?? 0) >= 80 ? "Data Normal" : "Perlu Perhatian"}
+              </span>
             </div>
           </div>
 
-          {/* Progress bar kehadiran */}
+          {/* Progress bar */}
           <div className="mt-6">
             <div className="h-2 rounded-full bg-white/10 overflow-hidden">
-              <div className="h-full rounded-full bg-[#7fe05b]" style={{ width: "94.2%" }} />
+              <div
+                className="h-full rounded-full bg-[#7fe05b] transition-all duration-700"
+                style={{ width: `${d?.kehadiran.persentase ?? 0}%` }}
+              />
             </div>
             <div className="flex justify-between mt-2">
               <span className="text-white/40 text-[11.5px] font-semibold">0%</span>
@@ -113,9 +148,9 @@ export default function AdminDashboardContent({ onMenuClick }: Props) {
           {/* Mini stats */}
           <div className="grid grid-cols-3 gap-3 mt-5">
             {[
-              { label: "Hadir",     value: "1,175", color: "#7fe05b" },
-              { label: "Tidak Hadir", value: "48",  color: "#ef4444" },
-              { label: "Terlambat", value: "25",    color: "#f59e0b" },
+              { label: "Hadir",       value: loading ? "—" : fmt(d?.kehadiran.hadir ?? 0),      color: "#7fe05b" },
+              { label: "Tidak Hadir", value: loading ? "—" : fmt(d?.kehadiran.tidakHadir ?? 0), color: "#ef4444" },
+              { label: "Terlambat",   value: loading ? "—" : fmt(d?.kehadiran.terlambat ?? 0),  color: "#f59e0b" },
             ].map((s, i) => (
               <div key={i} className="bg-white/5 rounded-xl px-3 py-2.5 text-center">
                 <p className="font-black text-[1.1rem] leading-none" style={{ color: s.color }}>{s.value}</p>
@@ -128,10 +163,10 @@ export default function AdminDashboardContent({ onMenuClick }: Props) {
         {/* ── Stat cards row 2 ── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: "Total Kelas",   value: "12",  icon: "🏫", color: "#3b82f6", bg: "#dbeafe" },
-            { label: "Jurusan",       value: "6",   icon: "📚", color: "#8b5cf6", bg: "#ede9fe" },
-            { label: "Guru Aktif",    value: "56",  icon: "👨‍🏫", color: "#f59e0b", bg: "#fef3c7" },
-            { label: "Staff & Admin", value: "28",  icon: "🏢", color: "#10b981", bg: "#d1fae5" },
+            { label: "Total Kelas",   value: loading ? "—" : fmt(d?.kelas ?? 0),     icon: "🏫", color: "#3b82f6", bg: "#dbeafe" },
+            { label: "Jurusan",       value: loading ? "—" : fmt(d?.jurusan ?? 0),   icon: "📚", color: "#8b5cf6", bg: "#ede9fe" },
+            { label: "Guru Aktif",    value: loading ? "—" : fmt(d?.guruAktif ?? 0), icon: "👨‍🏫", color: "#f59e0b", bg: "#fef3c7" },
+            { label: "Staf & Admin",  value: loading ? "—" : fmt(d?.stafAdmin ?? 0), icon: "🏢", color: "#10b981", bg: "#d1fae5" },
           ].map((s, i) => (
             <div key={i} className="bg-white rounded-2xl p-4 shadow-[0_2px_12px_rgba(0,0,0,0.05)]">
               <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg mb-3" style={{ background: s.bg }}>
@@ -142,7 +177,6 @@ export default function AdminDashboardContent({ onMenuClick }: Props) {
             </div>
           ))}
         </div>
-
 
       </main>
     </div>

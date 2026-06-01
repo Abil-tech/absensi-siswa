@@ -1,5 +1,14 @@
 import mongoose, { Document, Model, Schema } from "mongoose";
 
+export type StatusPengaduan = "open" | "selesai" | "ditutup";
+export type RolePesan = "walas" | "bk";
+
+export interface IPesan {
+  role: RolePesan;
+  pesan: string;
+  createdAt: Date;
+}
+
 export const KATEGORI_LIST = [
   "Pelanggaran Disiplin",
   "Masalah Akademik",
@@ -15,11 +24,21 @@ export interface IPengaduanBK extends Document {
   siswa: mongoose.Types.ObjectId;
   kategori: KategoriPengaduan;
   judul: string;
-  keterangan: string;
   file: string;
+  status: StatusPengaduan;
+  tidakSelesaiCount: number;
+  messages: IPesan[];
   createdAt: Date;
   updatedAt: Date;
 }
+
+const PesanSchema = new mongoose.Schema<IPesan>(
+  {
+    role:  { type: String, enum: ["walas", "bk"], required: true },
+    pesan: { type: String, required: true, trim: true },
+  },
+  { timestamps: { createdAt: true, updatedAt: false } }
+);
 
 const PengaduanBKSchema = new mongoose.Schema<IPengaduanBK>(
   {
@@ -43,21 +62,29 @@ const PengaduanBKSchema = new mongoose.Schema<IPengaduanBK>(
       required: true,
       trim: true,
     },
-    keterangan: {
-      type: String,
-      required: true,
-      trim: true,
-    },
     file: {
       type: String,
       required: true,
     },
+    status: {
+      type: String,
+      enum: ["open", "selesai", "ditutup"],
+      default: "open",
+    },
+    tidakSelesaiCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 3,
+    },
+    messages: [PesanSchema],
   },
   { timestamps: true }
 );
 
 PengaduanBKSchema.index({ walas: 1 });
 PengaduanBKSchema.index({ siswa: 1 });
+PengaduanBKSchema.index({ status: 1 });
 
 const PengaduanBK: Model<IPengaduanBK> =
   mongoose.models.PengaduanBK ||
