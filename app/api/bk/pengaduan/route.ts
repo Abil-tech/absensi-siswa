@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
         file:              p.file,
         status:            p.status,
         tidakSelesaiCount: p.tidakSelesaiCount,
-        messages:          p.messages,
+        messages:          p.messages ?? [],
         createdAt:         p.createdAt,
         walas: { nama: (p.walas as any)?.name ?? "—" },
         siswa: {

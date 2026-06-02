@@ -7,7 +7,7 @@ import PengaduanBK from "@/models/pengaduanbk";
 // Body: { pengaduanId, keputusan: "selesai" | "tidak_selesai" }
 export async function PATCH(req: NextRequest) {
   try {
-    await requireRole(["bk"]);
+    await requireRole(["walas"]);
     await dbConnect();
 
     const { pengaduanId, keputusan } = await req.json();
