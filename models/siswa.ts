@@ -67,7 +67,6 @@ const SiswaSchema = new mongoose.Schema<ISiswa>(
 
 // Index untuk query yang sering dipakai
 SiswaSchema.index({ kelas: 1 });
-SiswaSchema.index({ userId: 1 });
 
 const Siswa: Model<ISiswa> =
   mongoose.models.Siswa || mongoose.model<ISiswa>("Siswa", SiswaSchema);
