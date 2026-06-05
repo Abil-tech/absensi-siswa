@@ -1,10 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-<<<<<<< Updated upstream
-=======
 import BulkImportModal from "./BulkImportModal";
->>>>>>> Stashed changes
 
 interface Props {
   onMenuClick: () => void;
@@ -55,9 +52,6 @@ const EMPTY_FORM: FormData = {
 const AVATAR_COLORS = ["#3b82f6","#8b5cf6","#f59e0b","#ef4444","#06b6d4","#10b981","#f97316","#6366f1"];
 
 function getInitials(name: string): string {
-<<<<<<< Updated upstream
-  return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
-=======
   if (!name?.trim()) return "?";
   return name
     .split(" ")
@@ -65,7 +59,6 @@ function getInitials(name: string): string {
     .join("")
     .toUpperCase()
     .slice(0, 2);
->>>>>>> Stashed changes
 }
 
 function formatTanggal(dateStr: string): string {
@@ -89,10 +82,7 @@ export default function ListSiswaContent({ onMenuClick }: Props) {
   const [toast, setToast]             = useState("");
   const [formError, setFormError]     = useState<string | null>(null);
   const [submitting, setSubmitting]   = useState(false);
-<<<<<<< Updated upstream
-=======
   const [showBulkImport, setShowBulkImport] = useState(false);
->>>>>>> Stashed changes
 
   function showToast(msg: string) {
     setToast(msg);
@@ -100,10 +90,7 @@ export default function ListSiswaContent({ onMenuClick }: Props) {
   }
 
   async function fetchData() {
-<<<<<<< Updated upstream
-=======
     setLoading(true);
->>>>>>> Stashed changes
     try {
       const [siswaRes, kelasRes] = await Promise.all([
         fetch("/api/admin/siswa"),
@@ -112,19 +99,12 @@ export default function ListSiswaContent({ onMenuClick }: Props) {
       if (siswaRes.ok) {
         const json = await siswaRes.json();
         setSiswaList(json.siswa);
-<<<<<<< Updated upstream
-=======
       } else {
         showToast("❌ Gagal load data siswa");
->>>>>>> Stashed changes
       }
       if (kelasRes.ok) {
         const json = await kelasRes.json();
         setKelasList(json.kelas);
-<<<<<<< Updated upstream
-      }
-    } finally { setLoading(false); }
-=======
       } else {
         showToast("❌ Gagal load data kelas");
       }
@@ -133,15 +113,10 @@ export default function ListSiswaContent({ onMenuClick }: Props) {
     } finally {
       setLoading(false);
     }
->>>>>>> Stashed changes
   }
 
   useEffect(() => { fetchData(); }, []);
 
-<<<<<<< Updated upstream
-  // Auto-set jurusan saat kelas dipilih
-=======
->>>>>>> Stashed changes
   function handleKelasChange(kelasId: string) {
     const kelas = kelasList.find((k) => k.id === kelasId);
     if (!kelas) return;
@@ -189,10 +164,7 @@ export default function ListSiswaContent({ onMenuClick }: Props) {
     if (!/^\d{10}$/.test(form.nisn)) { setFormError("NISN harus tepat 10 digit angka."); return; }
     if (!form.nis.trim())            { setFormError("NIS wajib diisi."); return; }
     if (!form.kelasId)               { setFormError("Pilih kelas terlebih dahulu."); return; }
-<<<<<<< Updated upstream
-=======
     if (!form.jurusan.trim())        { setFormError("Jurusan wajib diisi."); return; }
->>>>>>> Stashed changes
     if (!form.tanggalLahir)          { setFormError("Tanggal lahir wajib diisi."); return; }
     if (!form.alamat.trim())         { setFormError("Alamat wajib diisi."); return; }
     if (!form.noTelp.trim())         { setFormError("No. telepon wajib diisi."); return; }
@@ -222,13 +194,6 @@ export default function ListSiswaContent({ onMenuClick }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
       });
-<<<<<<< Updated upstream
-      if (!res.ok) return;
-      await fetchData();
-      setDeleteConfirmId(null);
-      showToast("Data siswa berhasil dihapus ✓");
-    } catch {}
-=======
       if (!res.ok) {
         const json = await res.json();
         showToast(`❌ Gagal: ${json.error ?? "Hapus data gagal"}`);
@@ -240,7 +205,6 @@ export default function ListSiswaContent({ onMenuClick }: Props) {
     } catch (err) {
       showToast("❌ Error: Gagal terhubung ke server");
     }
->>>>>>> Stashed changes
   }
 
   const filtered = siswaList.filter((s) => {
@@ -282,11 +246,7 @@ export default function ListSiswaContent({ onMenuClick }: Props) {
                 </div>
               )}
 
-<<<<<<< Updated upstream
-              {/* Bagian 1: Data Akun */}
-=======
               {/* Data Akun */}
->>>>>>> Stashed changes
               <div>
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-6 h-6 rounded-full bg-[#111410] flex items-center justify-center text-[#7fe05b] text-[11px] font-black shrink-0">1</div>
@@ -319,11 +279,7 @@ export default function ListSiswaContent({ onMenuClick }: Props) {
 
               <div className="h-px bg-black/5" />
 
-<<<<<<< Updated upstream
-              {/* Bagian 2: Data Siswa */}
-=======
               {/* Data Siswa */}
->>>>>>> Stashed changes
               <div>
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-6 h-6 rounded-full bg-[#111410] flex items-center justify-center text-[#7fe05b] text-[11px] font-black shrink-0">2</div>
@@ -354,10 +310,6 @@ export default function ListSiswaContent({ onMenuClick }: Props) {
                     </div>
                   </div>
 
-<<<<<<< Updated upstream
-                  {/* Jurusan */}
-=======
->>>>>>> Stashed changes
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[11px] font-bold text-[#9a9a9a] uppercase tracking-wide">Jurusan *</label>
                     <input type="text" placeholder="Otomatis terisi saat memilih kelas" value={form.jurusan} onChange={(e) => setForm((f) => ({ ...f, jurusan: e.target.value }))} className="w-full px-4 py-3 text-[13.5px] bg-[#f0f0ea] text-[#1a1a1a] placeholder:text-[#b0b0a8] rounded-xl border border-transparent outline-none focus:border-[#7fe05b] focus:bg-white transition-all" />
@@ -434,9 +386,6 @@ export default function ListSiswaContent({ onMenuClick }: Props) {
               <path d="M2 16c0-3.314 3.134-5 7-5s7 1.686 7 5" stroke="#7fe05b" strokeWidth="1.5" strokeLinecap="round" />
               <path d="M13 3h4M15 1v4" stroke="#7fe05b" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
-<<<<<<< Updated upstream
-            <span className="text-[#7fe05b] hidden sm:block font-extrabold">Tambah Siswa</span>
-=======
             <span className="text-[#7fe05b] hidden sm:block font-extrabold">Tambah</span>
           </button>
           <button type="button" onClick={() => setShowBulkImport(true)} className="flex items-center gap-2.5 px-4 sm:px-5 py-3 bg-[#7fe05b] hover:bg-[#6dd54d] text-[#111410] rounded-xl font-bold text-[13px] transition shrink-0 shadow-sm">
@@ -445,7 +394,6 @@ export default function ListSiswaContent({ onMenuClick }: Props) {
               <path d="M19 20H5c-1 0-2 1-2 2v1h18v-1c0-1-1-2-2-2Z" stroke="currentColor" strokeWidth="2" />
             </svg>
             <span className="hidden sm:block font-extrabold">Excel</span>
->>>>>>> Stashed changes
           </button>
         </div>
 
@@ -476,11 +424,7 @@ export default function ListSiswaContent({ onMenuClick }: Props) {
             {filtered.map((siswa) => (
               <div key={siswa.id} className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(0,0,0,0.05)] overflow-hidden hover:shadow-[0_4px_24px_rgba(0,0,0,0.09)] transition-shadow">
                 <div className="p-5 flex items-start gap-4">
-<<<<<<< Updated upstream
-                  <div className="w-14 h-14 rounded-xl flex items-center justify-center text-white font-black text-lg shrink-0" style={{ background: AVATAR_COLORS[i % AVATAR_COLORS.length] }}>
-=======
                   <div className="w-14 h-14 rounded-xl flex items-center justify-center text-white font-black text-lg shrink-0" style={{ background: AVATAR_COLORS[Math.abs(siswa.id.charCodeAt(0)) % AVATAR_COLORS.length] }}>
->>>>>>> Stashed changes
                     {getInitials(siswa.name)}
                   </div>
                   <div className="flex-1 min-w-0">
