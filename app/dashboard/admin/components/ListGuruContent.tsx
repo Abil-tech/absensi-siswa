@@ -7,7 +7,7 @@ interface Props {
 }
 
 type UserRole = "walas" | "bk";
-
+type StatusType = "Aktif" | "Cuti" | "Nonaktif";
 
 interface Guru {
   id: string;
@@ -15,15 +15,23 @@ interface Guru {
   email: string;
   userId: string;
   role: UserRole;
-  mapel: string;
+  status: StatusType;
+  departemen: string;
+  kelasWalas?: string;   // hanya untuk role walas
 }
 
 // ── Data awal (nanti dari MongoDB) ──
 const INITIAL_DATA: Guru[] = [
-  { id: "1", name: "Dr. Sarah Jenkins", email: "sarah.jenkins@sekolah.sch.id", userId: "TCH-2024-081", role: "walas",   mapel: "Informatika / PPLG"   },
-  { id: "2", name: "Marcus Hendra",     email: "marcus@sekolah.sch.id",        userId: "TCH-2024-042", role: "walas",   mapel: "Matematika & Fisika"   },
-  { id: "3", name: "Simon Kael",        email: "simon@sekolah.sch.id",         userId: "TCH-2024-003", role: "walas",   mapel: "Ilmu Komputer"         },
-  { id: "4", name: "James Counselor",   email: "james@sekolah.sch.id",         userId: "TCH-2024-115", role: "bk",      mapel: "Bimbingan & Konseling" },
+  { id: "1", name: "Dr. Sarah Jenkins", email: "sarah.jenkins@sekolah.sch.id", userId: "TCH-2024-081", role: "walas", status: "Aktif", departemen: "Informatika / PPLG",    kelasWalas: "XI PPLG 1" },
+  { id: "2", name: "Marcus Hendra",     email: "marcus@sekolah.sch.id",        userId: "TCH-2024-042", role: "walas", status: "Cuti",  departemen: "Matematika & Fisika",  kelasWalas: "X PPLG 2"  },
+  { id: "3", name: "Simon Kael",        email: "simon@sekolah.sch.id",         userId: "TCH-2024-003", role: "walas", status: "Aktif", departemen: "Ilmu Komputer",        kelasWalas: "XII PPLG 1" },
+  { id: "4", name: "James Counselor",   email: "james@sekolah.sch.id",         userId: "TCH-2024-115", role: "bk",    status: "Aktif", departemen: "Bimbingan & Konseling" },
+];
+
+const KELAS_LIST = [
+  "X PPLG 1","X PPLG 2","X DKV 1","X DKV 2","X TJKT 1","X MPLB 1",
+  "XI PPLG 1","XI PPLG 2","XI MPLB 4","XI TJKT 2",
+  "XII PPLG 1","XII TJKT 4","XII DKV 2","XII MPLB 2",
 ];
 
 const ROLE_LABEL: Record<UserRole, string> = {
@@ -46,7 +54,11 @@ const ROLE_ICON: Record<UserRole, React.ReactNode> = {
   ),
 };
 
-
+const STATUS_STYLE: Record<StatusType, string> = {
+  Aktif:    "bg-[#7fe05b] text-[#111410]",
+  Cuti:     "bg-[#e8e8e0] text-[#6b6b6b]",
+  Nonaktif: "bg-red-100 text-red-600",
+};
 
 const AVATAR_COLORS = ["#3b82f6","#8b5cf6","#f59e0b","#ef4444","#06b6d4","#10b981","#f97316","#6366f1"];
 
@@ -58,12 +70,14 @@ interface FormData {
   userId: string;
   password: string;
   role: UserRole;
-  mapel: string;
+  status: StatusType;
+  departemen: string;
+  kelasWalas: string;   // hanya aktif saat role walas
 }
 
 const EMPTY_FORM: FormData = {
   name: "", email: "", userId: "", password: "",
-  role: "walas", mapel: "",
+  role: "walas", status: "Aktif", departemen: "", kelasWalas: "",
 };
 
 export default function ListGuruContent({ onMenuClick }: Props) {
@@ -87,8 +101,9 @@ export default function ListGuruContent({ onMenuClick }: Props) {
     setForm({
       name: guru.name, email: guru.email,
       userId: guru.userId, password: "",
-      role: guru.role,
-      mapel: guru.mapel,
+      role: guru.role, status: guru.status,
+      departemen: guru.departemen,
+      kelasWalas: guru.kelasWalas ?? "",
     });
     setView("form");
   }
@@ -102,7 +117,8 @@ export default function ListGuruContent({ onMenuClick }: Props) {
   function handleSubmit() {
     if (!form.name.trim())        { alert("Nama wajib diisi."); return; }
     if (!form.userId.trim())      { alert("ID guru wajib diisi."); return; }
-    if (!form.mapel.trim())  { alert("Mata Pelajaran wajib diisi."); return; }
+    if (!form.departemen.trim())  { alert("Departemen wajib diisi."); return; }
+    if (form.role === "walas" && !form.kelasWalas) { alert("Pilih kelas wali untuk guru/walas."); return; }
     if (!editId && !form.password.trim()) { alert("Password wajib diisi."); return; }
 
     if (editId) {
@@ -119,7 +135,9 @@ export default function ListGuruContent({ onMenuClick }: Props) {
         email: form.email,
         userId: form.userId,
         role: form.role,
-        mapel: form.mapel,
+        status: form.status,
+        departemen: form.departemen,
+        kelasWalas: form.role === "walas" ? form.kelasWalas : undefined,
       };
       setGuruList((prev) => [newGuru, ...prev]);
       showToast("Guru berhasil ditambahkan ✓");
@@ -138,7 +156,7 @@ export default function ListGuruContent({ onMenuClick }: Props) {
     const matchSearch =
       g.name.toLowerCase().includes(search.toLowerCase()) ||
       g.userId.toLowerCase().includes(search.toLowerCase()) ||
-      g.mapel.toLowerCase().includes(search.toLowerCase());
+      g.departemen.toLowerCase().includes(search.toLowerCase());
     const matchRole = filterRole === "Semua" || g.role === filterRole;
     return matchSearch && matchRole;
   });
@@ -256,19 +274,82 @@ export default function ListGuruContent({ onMenuClick }: Props) {
                 />
               </div>
 
-              {/* Mapel */}
+              {/* Departemen */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-bold text-[#9a9a9a] uppercase tracking-wide">Mata Pelajaran *</label>
+                <label className="text-[11px] font-bold text-[#9a9a9a] uppercase tracking-wide">Departemen / Mata Pelajaran *</label>
                 <input
                   type="text"
                   placeholder="Contoh: Matematika & Fisika"
-                  value={form.mapel}
-                  onChange={(e) => setForm((f) => ({ ...f, mapel: e.target.value }))}
+                  value={form.departemen}
+                  onChange={(e) => setForm((f) => ({ ...f, departemen: e.target.value }))}
                   className="w-full px-4 py-3 text-[13.5px] bg-[#f0f0ea] text-[#1a1a1a] placeholder:text-[#b0b0a8] rounded-xl border border-transparent outline-none focus:border-[#7fe05b] focus:bg-white transition-all"
                 />
               </div>
 
-             
+              {/* Kelas Wali — hanya muncul saat role walas */}
+              {form.role === "walas" && (
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-bold text-[#9a9a9a] uppercase tracking-wide">
+                    Kelas Wali *
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={form.kelasWalas}
+                      onChange={(e) => setForm((f) => ({ ...f, kelasWalas: e.target.value }))}
+                      className="w-full px-4 py-3 text-[13.5px] appearance-none bg-[#f0f0ea] rounded-xl border border-transparent outline-none focus:border-[#7fe05b] focus:bg-white transition-all cursor-pointer"
+                      style={{ color: form.kelasWalas ? "#1a1a1a" : "#b0b0a8" }}
+                    >
+                      <option value="" disabled>Pilih kelas yang diwali...</option>
+                      {["X","XI","XII"].map((grade) => (
+                        <optgroup key={grade} label={`Kelas ${grade}`}>
+                          {KELAS_LIST.filter((k) => k.startsWith(grade + " ") && !k.startsWith(grade + "I") && !k.startsWith("XII") || k.startsWith(grade + " ")).filter((k) => {
+                            if (grade === "X")   return k.startsWith("X ") && !k.startsWith("XI") && !k.startsWith("XII");
+                            if (grade === "XI")  return k.startsWith("XI ") && !k.startsWith("XII");
+                            if (grade === "XII") return k.startsWith("XII ");
+                            return false;
+                          }).map((k) => (
+                            <option key={k} value={k}>{k}</option>
+                          ))}
+                        </optgroup>
+                      ))}
+                    </select>
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="absolute right-4 top-1/2 -translate-y-1/2 text-[#9a9a9a] pointer-events-none">
+                      <path d="M3 5l4 4 4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                    </svg>
+                  </div>
+                  {form.kelasWalas && (
+                    <p className="text-[11.5px] text-[#4a9e2f] font-semibold flex items-center gap-1.5">
+                      <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                        <circle cx="7" cy="7" r="6" fill="#7fe05b" />
+                        <path d="M4 7l2.5 2.5L10 5" stroke="#111410" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      Wali kelas: {form.kelasWalas}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Status */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-bold text-[#9a9a9a] uppercase tracking-wide">Status</label>
+                <div className="flex gap-2">
+                  {(["Aktif", "Cuti", "Nonaktif"] as StatusType[]).map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setForm((f) => ({ ...f, status: s }))}
+                      style={{ WebkitTapHighlightColor: "transparent" }}
+                      className={`px-4 py-2 rounded-full text-[12.5px] font-bold border-2 transition-all active:opacity-70 ${
+                        form.status === s
+                          ? STATUS_STYLE[s] + " border-transparent"
+                          : "bg-[#f0f0ea] text-[#6b6b6b] border-transparent"
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               {/* Password */}
               <div className="flex flex-col gap-1.5">
@@ -360,7 +441,7 @@ export default function ListGuruContent({ onMenuClick }: Props) {
             </svg>
             <input
               type="text"
-              placeholder="Cari berdasarkan Nama, ID, atau Mapel..."
+              placeholder="Cari berdasarkan Nama, ID, atau Departemen..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-11 pr-4 py-3 text-[13px] bg-white rounded-xl border border-black/10 outline-none focus:border-[#7fe05b] transition-all shadow-sm"
@@ -433,16 +514,27 @@ export default function ListGuruContent({ onMenuClick }: Props) {
                         <p className="text-[14.5px] font-extrabold text-[#1a1a1a] truncate">{guru.name}</p>
                         <p className="text-[12px] text-[#9a9a9a] font-mono mt-0.5">ID : {guru.userId}</p>
                       </div>
-                      <span className={`px-2.5 py-1 rounded-full text-[11.5px] font-black shrink-0`}>
-                        
+                      <span className={`px-2.5 py-1 rounded-full text-[11.5px] font-black shrink-0 ${STATUS_STYLE[guru.status]}`}>
+                        {guru.status}
                       </span>
                     </div>
 
-                    {/* Role + Mapel */}
+                    {/* Role + Departemen */}
                     <div className="flex items-center gap-1.5 mt-2.5">
                       <span className="text-[#4a9e2f]">{ROLE_ICON[guru.role]}</span>
-                      <span className="text-[12.5px] font-semibold text-[#2d2d2d]">{guru.mapel}</span>
+                      <span className="text-[12.5px] font-semibold text-[#2d2d2d]">{guru.departemen}</span>
                     </div>
+                    {/* Kelas wali — hanya untuk walas */}
+                    {guru.role === "walas" && guru.kelasWalas && (
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="text-[#9a9a9a]">
+                          <rect x="1" y="2" width="12" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
+                          <path d="M1 5h12" stroke="currentColor" strokeWidth="1.3" />
+                          <path d="M4 1v2M10 1v2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                        </svg>
+                        <span className="text-[11.5px] text-[#9a9a9a] font-semibold">Wali Kelas {guru.kelasWalas}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
