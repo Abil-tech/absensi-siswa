@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import BulkImportModal from "./BulkImportModal";
 
 interface Props {
   onMenuClick: () => void;
@@ -51,7 +52,13 @@ const EMPTY_FORM: FormData = {
 const AVATAR_COLORS = ["#3b82f6","#8b5cf6","#f59e0b","#ef4444","#06b6d4","#10b981","#f97316","#6366f1"];
 
 function getInitials(name: string): string {
-  return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+  if (!name?.trim()) return "?";
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 }
 
 function formatTanggal(dateStr: string): string {
@@ -75,6 +82,7 @@ export default function ListSiswaContent({ onMenuClick }: Props) {
   const [toast, setToast]             = useState("");
   const [formError, setFormError]     = useState<string | null>(null);
   const [submitting, setSubmitting]   = useState(false);
+  const [showBulkImport, setShowBulkImport] = useState(false);
 
   function showToast(msg: string) {
     setToast(msg);
@@ -82,6 +90,7 @@ export default function ListSiswaContent({ onMenuClick }: Props) {
   }
 
   async function fetchData() {
+    setLoading(true);
     try {
       const [siswaRes, kelasRes] = await Promise.all([
         fetch("/api/admin/siswa"),
@@ -90,17 +99,24 @@ export default function ListSiswaContent({ onMenuClick }: Props) {
       if (siswaRes.ok) {
         const json = await siswaRes.json();
         setSiswaList(json.siswa);
+      } else {
+        showToast("❌ Gagal load data siswa");
       }
       if (kelasRes.ok) {
         const json = await kelasRes.json();
         setKelasList(json.kelas);
+      } else {
+        showToast("❌ Gagal load data kelas");
       }
-    } finally { setLoading(false); }
+    } catch (err) {
+      showToast("❌ Error: Gagal terhubung ke server");
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => { fetchData(); }, []);
 
-  // Auto-set jurusan saat kelas dipilih
   function handleKelasChange(kelasId: string) {
     const kelas = kelasList.find((k) => k.id === kelasId);
     if (!kelas) return;
@@ -148,6 +164,7 @@ export default function ListSiswaContent({ onMenuClick }: Props) {
     if (!/^\d{10}$/.test(form.nisn)) { setFormError("NISN harus tepat 10 digit angka."); return; }
     if (!form.nis.trim())            { setFormError("NIS wajib diisi."); return; }
     if (!form.kelasId)               { setFormError("Pilih kelas terlebih dahulu."); return; }
+    if (!form.jurusan.trim())        { setFormError("Jurusan wajib diisi."); return; }
     if (!form.tanggalLahir)          { setFormError("Tanggal lahir wajib diisi."); return; }
     if (!form.alamat.trim())         { setFormError("Alamat wajib diisi."); return; }
     if (!form.noTelp.trim())         { setFormError("No. telepon wajib diisi."); return; }
@@ -177,11 +194,17 @@ export default function ListSiswaContent({ onMenuClick }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
       });
-      if (!res.ok) return;
+      if (!res.ok) {
+        const json = await res.json();
+        showToast(`❌ Gagal: ${json.error ?? "Hapus data gagal"}`);
+        return;
+      }
       await fetchData();
       setDeleteConfirmId(null);
       showToast("Data siswa berhasil dihapus ✓");
-    } catch {}
+    } catch (err) {
+      showToast("❌ Error: Gagal terhubung ke server");
+    }
   }
 
   const filtered = siswaList.filter((s) => {
@@ -223,7 +246,7 @@ export default function ListSiswaContent({ onMenuClick }: Props) {
                 </div>
               )}
 
-              {/* Bagian 1: Data Akun */}
+              {/* Data Akun */}
               <div>
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-6 h-6 rounded-full bg-[#111410] flex items-center justify-center text-[#7fe05b] text-[11px] font-black shrink-0">1</div>
@@ -256,15 +279,13 @@ export default function ListSiswaContent({ onMenuClick }: Props) {
 
               <div className="h-px bg-black/5" />
 
-              {/* Bagian 2: Data Siswa */}
+              {/* Data Siswa */}
               <div>
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-6 h-6 rounded-full bg-[#111410] flex items-center justify-center text-[#7fe05b] text-[11px] font-black shrink-0">2</div>
                   <h3 className="text-[13.5px] font-extrabold text-[#1a1a1a]">Data Siswa</h3>
                 </div>
                 <div className="flex flex-col gap-4">
-
-                  {/* NISN + NIS */}
                   <div className="grid grid-cols-2 gap-3">
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[11px] font-bold text-[#9a9a9a] uppercase tracking-wide">NISN * <span className="font-normal normal-case text-[#b0b0a8]">(10 digit)</span></label>
@@ -276,7 +297,6 @@ export default function ListSiswaContent({ onMenuClick }: Props) {
                     </div>
                   </div>
 
-                  {/* Kelas */}
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[11px] font-bold text-[#9a9a9a] uppercase tracking-wide">Kelas *</label>
                     <div className="relative">
@@ -290,13 +310,11 @@ export default function ListSiswaContent({ onMenuClick }: Props) {
                     </div>
                   </div>
 
-                  {/* Jurusan */}
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[11px] font-bold text-[#9a9a9a] uppercase tracking-wide">Jurusan *</label>
                     <input type="text" placeholder="Otomatis terisi saat memilih kelas" value={form.jurusan} onChange={(e) => setForm((f) => ({ ...f, jurusan: e.target.value }))} className="w-full px-4 py-3 text-[13.5px] bg-[#f0f0ea] text-[#1a1a1a] placeholder:text-[#b0b0a8] rounded-xl border border-transparent outline-none focus:border-[#7fe05b] focus:bg-white transition-all" />
                   </div>
 
-                  {/* Jenis Kelamin */}
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[11px] font-bold text-[#9a9a9a] uppercase tracking-wide">Jenis Kelamin *</label>
                     <div className="flex gap-3">
@@ -308,19 +326,16 @@ export default function ListSiswaContent({ onMenuClick }: Props) {
                     </div>
                   </div>
 
-                  {/* Tanggal Lahir */}
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[11px] font-bold text-[#9a9a9a] uppercase tracking-wide">Tanggal Lahir *</label>
                     <input type="date" value={form.tanggalLahir} onChange={(e) => setForm((f) => ({ ...f, tanggalLahir: e.target.value }))} className="w-full px-4 py-3 text-[13.5px] bg-[#f0f0ea] text-[#1a1a1a] rounded-xl border border-transparent outline-none focus:border-[#7fe05b] focus:bg-white transition-all" />
                   </div>
 
-                  {/* No. Telepon */}
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[11px] font-bold text-[#9a9a9a] uppercase tracking-wide">No. Telepon *</label>
                     <input type="tel" placeholder="Contoh: 0812-3456-7890" value={form.noTelp} onChange={(e) => setForm((f) => ({ ...f, noTelp: e.target.value }))} className="w-full px-4 py-3 text-[13.5px] bg-[#f0f0ea] text-[#1a1a1a] placeholder:text-[#b0b0a8] rounded-xl border border-transparent outline-none focus:border-[#7fe05b] focus:bg-white transition-all" />
                   </div>
 
-                  {/* Alamat */}
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[11px] font-bold text-[#9a9a9a] uppercase tracking-wide">Alamat Lengkap *</label>
                     <textarea rows={3} placeholder="Jl. Merdeka No. 12, RT 01/RW 02, Bandung" value={form.alamat} onChange={(e) => setForm((f) => ({ ...f, alamat: e.target.value }))} className="w-full px-4 py-3 text-[13.5px] bg-[#f0f0ea] text-[#1a1a1a] placeholder:text-[#b0b0a8] rounded-xl border border-transparent outline-none focus:border-[#7fe05b] focus:bg-white transition-all resize-none" />
@@ -356,7 +371,7 @@ export default function ListSiswaContent({ onMenuClick }: Props) {
 
       <main className="flex-1 px-4 sm:px-6 lg:px-8 py-5 sm:py-7 flex flex-col gap-5">
 
-        {/* Search + Tambah */}
+        {/* Search + Buttons */}
         <div className="flex items-center gap-3">
           <div className="relative flex-1">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9a9a9a]">
@@ -371,7 +386,14 @@ export default function ListSiswaContent({ onMenuClick }: Props) {
               <path d="M2 16c0-3.314 3.134-5 7-5s7 1.686 7 5" stroke="#7fe05b" strokeWidth="1.5" strokeLinecap="round" />
               <path d="M13 3h4M15 1v4" stroke="#7fe05b" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
-            <span className="text-[#7fe05b] hidden sm:block font-extrabold">Tambah Siswa</span>
+            <span className="text-[#7fe05b] hidden sm:block font-extrabold">Tambah</span>
+          </button>
+          <button type="button" onClick={() => setShowBulkImport(true)} className="flex items-center gap-2.5 px-4 sm:px-5 py-3 bg-[#7fe05b] hover:bg-[#6dd54d] text-[#111410] rounded-xl font-bold text-[13px] transition shrink-0 shadow-sm">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2v16m8-8H4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              <path d="M19 20H5c-1 0-2 1-2 2v1h18v-1c0-1-1-2-2-2Z" stroke="currentColor" strokeWidth="2" />
+            </svg>
+            <span className="hidden sm:block font-extrabold">Excel</span>
           </button>
         </div>
 
@@ -399,10 +421,10 @@ export default function ListSiswaContent({ onMenuClick }: Props) {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {filtered.map((siswa, i) => (
+            {filtered.map((siswa) => (
               <div key={siswa.id} className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(0,0,0,0.05)] overflow-hidden hover:shadow-[0_4px_24px_rgba(0,0,0,0.09)] transition-shadow">
                 <div className="p-5 flex items-start gap-4">
-                  <div className="w-14 h-14 rounded-xl flex items-center justify-center text-white font-black text-lg shrink-0" style={{ background: AVATAR_COLORS[i % AVATAR_COLORS.length] }}>
+                  <div className="w-14 h-14 rounded-xl flex items-center justify-center text-white font-black text-lg shrink-0" style={{ background: AVATAR_COLORS[Math.abs(siswa.id.charCodeAt(0)) % AVATAR_COLORS.length] }}>
                     {getInitials(siswa.name)}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -457,6 +479,14 @@ export default function ListSiswaContent({ onMenuClick }: Props) {
           {toast}
         </div>
       )}
+
+      {/* Bulk Import Modal */}
+      <BulkImportModal
+        isOpen={showBulkImport}
+        onClose={() => setShowBulkImport(false)}
+        onSuccess={fetchData}
+        kelasList={kelasList}
+      />
     </div>
   );
 }
