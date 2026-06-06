@@ -1,37 +1,82 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🚀 Absensi Siswa
 
-## Getting Started
+[![Vercel Deployment](https://img.shields.io/badge/Deploy-Vercel-black?style=flat-square&logo=vercel)](https://absensi-siswa-beta.vercel.app/)
 
-First, run the development server:
+> Sistem Manajemen Sekolah terintegrasi dengan Auth berbasis Role (Admin, Guru, Siswa) untuk efisiensi pelaporan absensi. Selain itu fitur melakukan pengaduan kepada Bk dan dispensasi siswa
 
+---
+
+## 📸 Pratinjau / Demo
+![Screenshot Aplikasi](https://via.placeholder.com/800x450.png?text=Taruh+Screenshot+atau+GIF+Aplikasi+di+Sini)
+*Link Demo Langsung:* [Klik di sini untuk mencoba](https://absensi-siswa-beta.vercel.app/)
+
+---
+
+## ✨ Fitur Utama
+- **Multi-role Authentication** – Login aman menggunakan Next-Auth dipisahkan berdasarkan hak akses (Admin, Guru, BK, Siswa).
+- **Dashboard Dinamis** – Tampilan statistik yang disesuaikan dengan role pengguna.
+- **Responsive Design** – Nyaman digunakan di HP maupun Laptop (Tailwind CSS).
+- **Anti-Loop Route Guard** – Proteksi halaman yang kuat via Next.js Middleware.
+- **Form Absensi Siswa** 
+- **Dispensasi Siswa** - Pengajuan Dispen kepada guru dan BK 
+- **Rekap Guru dan BK** - Melihat siswa yang hadir dan siswa yang tidak hadir
+- **Pengaduan BK** - Guru melakukan pengaduan tingkah laku siswa ke BK, BK akan membalas pengaduan tersebut secara realtime
+
+
+
+---
+
+## 🛠️ Teknologi yang Digunakan
+- **Frontend/Framework:** Next.js (App Router), TypeScript
+- **Styling:** Tailwind CSS, Shadcn UI
+- **Authentication:** Next-Auth / Auth.js
+- **Database/ORM:** Mongodb
+- **Deployment:** Vercel
+
+---
+
+## 🚀 Cara Menjalankan di Lokal
+
+Ikuti langkah-langkah ini untuk menjalankan proyek di komputer kamu:
+
+### 1. Clone Repositori
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+git clone [https://github.com/Abil-tech/absensi-siswa.git]
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Install Dependencies
+npm install 
+- bcryptjs
+- cloudinary
+- dotenv
+- mongoose
+- next-auth-
+- react
+- eslint
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. Setup .env
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+MONGODB_URI:
+NEXTAUTH_SECRET:
+NEXTAUTH_URL:
+CLOUDINARY_CLOUD_NAME:
+CLOUDINARY_API_KEY
+CLOUDINARY_API_SECRET
 
-## Learn More
+### 4. Jalan Server
 
-To learn more about Next.js, take a look at the following resources:
+npm run dev.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+masuk ke link http://localhost:3000
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Anggota kelompok
+- Abil Fida Ismail / Github (Abil-tech)
+    (Backend, Api Call)
+- Muhammad Zahid Rantisi Github (hddzaa)
+    (Frontend)
+- Alvairani Jasmine Apringga / Github (alvairani-create)
+    (Flowchart, dan database)
+- Kanaya Nesha Adisty
+    (Tester)
+- Nabila Kika Tanya 
+    (Website Design)
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-tes
