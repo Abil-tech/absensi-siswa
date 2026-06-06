@@ -1,6 +1,7 @@
 import mongoose, { Document, Model } from "mongoose";
 
 export type UserRole = "admin" | "walas" | "bk" | "siswa";
+export type UserStatus = "Aktif" | "Cuti" | "Nonaktif";
 
 export interface IUser extends Document {
   name: string;
@@ -8,6 +9,9 @@ export interface IUser extends Document {
   userId?: string;
   password: string;
   role: UserRole;
+  // ── Field tambahan untuk guru ──
+  status?: UserStatus;
+  departemen?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -23,6 +27,16 @@ const UserSchema = new mongoose.Schema<IUser>(
       enum: ["admin", "walas", "bk", "siswa"],
       required: true,
       default: "siswa",
+    },
+    // Hanya relevan untuk role walas/bk
+    status: {
+      type: String,
+      enum: ["Aktif", "Cuti", "Nonaktif"],
+      default: "Aktif",
+    },
+    departemen: {
+      type: String,
+      trim: true,
     },
   },
   { timestamps: true }
