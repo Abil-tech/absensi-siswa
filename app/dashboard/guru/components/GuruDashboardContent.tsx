@@ -23,6 +23,25 @@ interface KelasData {
   nama: string;
 }
 
+interface DetailAbsensi {
+  id: string;
+  status: string;
+  waktu: string;
+  tanggal: Date;
+  keterangan: string;
+  file: string | null;
+}
+
+interface DetailSiswa {
+  siswa: {
+    id: string;
+    nama: string;
+    nis: string;
+    kelas: string;
+  };
+  absensi: DetailAbsensi | null;
+}
+
 interface DispensasiItem {
   id: string;
   file: string;
@@ -87,6 +106,13 @@ export default function GuruDashboardContent({ onMenuClick }: Props) {
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [approveError, setApproveError] = useState<string | null>(null);
 
+  // Modal state
+  const [modalOpen, setModalOpen]           = useState(false);
+  const [selectedSiswa, setSelectedSiswa]   = useState<SiswaAbsensi | null>(null);
+  const [detailAbsensi, setDetailAbsensi]   = useState<DetailSiswa | null>(null);
+  const [loadingDetail, setLoadingDetail]   = useState(false);
+  const [detailError, setDetailError]       = useState<string | null>(null);
+
   useEffect(() => {
     async function fetchData() {
       try {
@@ -112,6 +138,36 @@ export default function GuruDashboardContent({ onMenuClick }: Props) {
     }
     fetchDispen();
   }, []);
+
+  async function handleOpenDetail(siswa: SiswaAbsensi) {
+    setSelectedSiswa(siswa);
+    setModalOpen(true);
+    setLoadingDetail(true);
+    setDetailError(null);
+    setDetailAbsensi(null);
+
+    try {
+      const res = await fetch(`/api/absensi/siswa/${siswa.id}`);
+      if (!res.ok) {
+        const json = await res.json();
+        setDetailError(json.error ?? "Gagal memuat detail");
+        return;
+      }
+      const json = await res.json();
+      setDetailAbsensi(json);
+    } catch {
+      setDetailError("Gagal terhubung ke server");
+    } finally {
+      setLoadingDetail(false);
+    }
+  }
+
+  function handleCloseModal() {
+    setModalOpen(false);
+    setSelectedSiswa(null);
+    setDetailAbsensi(null);
+    setDetailError(null);
+  }
 
   async function handleApprove(dispensasiId: string, keputusan: "disetujui" | "ditolak", catatan?: string) {
     setApprovingId(dispensasiId);
@@ -222,7 +278,12 @@ export default function GuruDashboardContent({ onMenuClick }: Props) {
                 </div>
                 <div className="divide-y divide-black/[0.04]">
                   {filtered.map((siswa, i) => (
-                    <div key={siswa.id} className="grid grid-cols-[1fr_2fr_1.2fr_1fr] px-6 py-4 items-center hover:bg-[#fafaf7] transition-colors">
+                    <button
+                      key={siswa.id}
+                      type="button"
+                      onClick={() => handleOpenDetail(siswa)}
+                      className="w-full grid grid-cols-[1fr_2fr_1.2fr_1fr] px-6 py-4 items-center hover:bg-[#fafaf7] transition-colors text-left"
+                    >
                       <span className="text-[13px] font-mono font-semibold text-[#6b6b6b]">{siswa.nis}</span>
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-[11px] font-black shrink-0" style={{ background: AVATAR_COLORS[i % AVATAR_COLORS.length] }}>{getInitials(siswa.nama)}</div>
@@ -230,21 +291,26 @@ export default function GuruDashboardContent({ onMenuClick }: Props) {
                       </div>
                       <span className="text-[13px] font-semibold text-[#2d2d2d]">{siswa.waktu}</span>
                       <span className={`inline-flex items-center px-3.5 py-1.5 rounded-full text-[12px] font-bold w-fit ${STATUS_STYLE[siswa.status ?? "null"]}`}>{STATUS_LABEL[siswa.status ?? "null"]}</span>
-                    </div>
+                    </button>
                   ))}
                   {filtered.length === 0 && <div className="px-6 py-12 text-center text-[13px] text-[#9a9a9a]">Tidak ada siswa yang cocok.</div>}
                 </div>
               </div>
               <div className="sm:hidden divide-y divide-black/[0.04]">
                 {filtered.map((siswa, i) => (
-                  <div key={siswa.id} className="px-4 py-4 flex items-center gap-3">
+                  <button
+                    key={siswa.id}
+                    type="button"
+                    onClick={() => handleOpenDetail(siswa)}
+                    className="w-full px-4 py-4 flex items-center gap-3 hover:bg-[#fafaf7] transition-colors text-left"
+                  >
                     <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-[11px] font-black shrink-0" style={{ background: AVATAR_COLORS[i % AVATAR_COLORS.length] }}>{getInitials(siswa.nama)}</div>
                     <div className="flex-1 min-w-0">
                       <p className="text-[13.5px] font-bold text-[#1a1a1a] truncate">{siswa.nama}</p>
                       <p className="text-[11.5px] text-[#9a9a9a] font-mono mt-0.5">{siswa.nis} · {siswa.waktu}</p>
                     </div>
                     <span className={`px-3 py-1.5 rounded-full text-[11.5px] font-bold shrink-0 ${STATUS_STYLE[siswa.status ?? "null"]}`}>{STATUS_LABEL[siswa.status ?? "null"]}</span>
-                  </div>
+                  </button>
                 ))}
                 {filtered.length === 0 && <div className="px-4 py-10 text-center text-[13px] text-[#9a9a9a]">Tidak ada siswa yang cocok.</div>}
               </div>
@@ -322,6 +388,141 @@ export default function GuruDashboardContent({ onMenuClick }: Props) {
           )}
         </div>
       </main>
+
+      {/* ── Modal Detail Absensi Siswa ── */}
+      {modalOpen && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-black/5">
+              <h2 className="text-[1rem] font-extrabold text-[#1a1a1a]">Detail Absensi</h2>
+              <button
+                type="button"
+                onClick={handleCloseModal}
+                className="text-[#9a9a9a] hover:text-[#1a1a1a] transition-colors"
+              >
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                  <path d="M4 4l10 10M14 4l-10 10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="px-5 sm:px-6 py-5 flex flex-col gap-4">
+              {/* Info Siswa */}
+              {selectedSiswa && (
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-white text-[11px] font-black shrink-0"
+                    style={{ background: AVATAR_COLORS[siswaList.indexOf(selectedSiswa) % AVATAR_COLORS.length] }}
+                  >
+                    {getInitials(selectedSiswa.nama)}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-[13.5px] font-bold text-[#1a1a1a]">{selectedSiswa.nama}</p>
+                    <p className="text-[11.5px] text-[#9a9a9a] font-mono">{selectedSiswa.nis}</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="h-px bg-black/5" />
+
+              {/* Loading */}
+              {loadingDetail && (
+                <div className="flex flex-col items-center gap-2 py-6">
+                  <span className="w-5 h-5 border-[2px] border-[#e8e8e0] border-t-[#7fe05b] rounded-full animate-spin" />
+                  <p className="text-[13px] text-[#9a9a9a]">Memuat detail...</p>
+                </div>
+              )}
+
+              {/* Error */}
+              {detailError && !loadingDetail && (
+                <div className="bg-red-50 border border-red-200 text-red-700 text-[13px] font-medium rounded-xl px-4 py-3">
+                  {detailError}
+                </div>
+              )}
+
+              {/* Detail Absensi */}
+              {!loadingDetail && detailAbsensi && (
+                <>
+                  {detailAbsensi.absensi ? (
+                    <div className="flex flex-col gap-3">
+                      <div>
+                        <p className="text-[11px] font-bold text-[#9a9a9a] uppercase tracking-wide mb-1">Status</p>
+                        <span className={`inline-flex items-center px-3.5 py-1.5 rounded-full text-[12px] font-bold ${STATUS_STYLE[detailAbsensi.absensi.status ?? "null"]}`}>
+                          {STATUS_LABEL[detailAbsensi.absensi.status ?? "null"]}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-[11px] font-bold text-[#9a9a9a] uppercase tracking-wide mb-1">Waktu</p>
+                          <p className="text-[13.5px] font-semibold text-[#1a1a1a]">{detailAbsensi.absensi.waktu}</p>
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-bold text-[#9a9a9a] uppercase tracking-wide mb-1">Tanggal</p>
+                          <p className="text-[13.5px] font-semibold text-[#1a1a1a]">{formatTanggal(detailAbsensi.absensi.tanggal.toString())}</p>
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="text-[11px] font-bold text-[#9a9a9a] uppercase tracking-wide mb-1">Keterangan</p>
+                        <p className="text-[13px] text-[#6b6b6b] leading-relaxed">{detailAbsensi.absensi.keterangan || "—"}</p>
+                      </div>
+
+                      {/* File Preview */}
+                      {detailAbsensi.absensi.file && (
+                        <div>
+                          <p className="text-[11px] font-bold text-[#9a9a9a] uppercase tracking-wide mb-2">Lampiran</p>
+                          {detailAbsensi.absensi.file.includes("image") || detailAbsensi.absensi.file.match(/\.(jpg|jpeg|png|webp)$/i) ? (
+                            <a
+                              href={detailAbsensi.absensi.file}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-block"
+                            >
+                              <img
+                                src={detailAbsensi.absensi.file}
+                                alt="Bukti absensi"
+                                className="max-w-full h-auto rounded-xl border border-black/10"
+                              />
+                            </a>
+                          ) : (
+                            <a
+                              href={detailAbsensi.absensi.file}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 px-4 py-3 bg-[#f0f0ea] rounded-xl hover:bg-[#e8e8e0] transition-colors"
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                <polyline points="13 2 13 9 20 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                              <span className="text-[13px] font-semibold text-[#6b6b6b]">Buka Dokumen</span>
+                            </a>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-6 text-center">
+                      <p className="text-[13px] text-[#9a9a9a] font-medium">Siswa belum melakukan absensi hari ini</p>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            <div className="px-5 sm:px-6 py-4 border-t border-black/5">
+              <button
+                type="button"
+                onClick={handleCloseModal}
+                className="w-full py-2.5 rounded-xl bg-[#f0f0ea] hover:bg-[#e8e8e0] text-[#6b6b6b] text-[13px] font-bold transition-colors"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
