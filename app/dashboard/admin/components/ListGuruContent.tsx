@@ -51,7 +51,7 @@ const ROLE_ICON: Record<UserRole, React.ReactNode> = {
 
 const STATUS_STYLE: Record<StatusType, string> = {
   Aktif:    "bg-[#7fe05b] text-[#111410]",
-  Cuti:     "bg-[#e8e8e0] text-[#6b6b6b]",
+  Cuti:     "bg-[#000000] text-[#7fe05b]",
   Nonaktif: "bg-red-100 text-red-600",
 };
 
