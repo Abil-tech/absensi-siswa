@@ -9,6 +9,7 @@ type StatusPengaduan = "open" | "selesai" | "ditutup";
 interface Pesan {
   role: "walas" | "bk";
   pesan: string;
+  gambar?: string;
   createdAt: string;
 }
 
@@ -51,6 +52,9 @@ const STATUS_STYLE: Record<StatusPengaduan, string> = {
   ditutup:  "bg-gray-100 text-gray-500",
 };
 
+const MAX_GAMBAR_SIZE = 10 * 1024 * 1024; // 10MB
+const ALLOWED_GAMBAR_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+
 export default function PengaduanMasukContent({ onMenuClick }: Props) {
   const [pengaduanList, setPengaduanList] = useState<PengaduanItem[]>([]);
   const [loading, setLoading]             = useState(true);
@@ -59,6 +63,13 @@ export default function PengaduanMasukContent({ onMenuClick }: Props) {
   const [selected, setSelected]           = useState<PengaduanItem | null>(null);
   const [pesanBaru, setPesanBaru]         = useState("");
   const [loadingPesan, setLoadingPesan]   = useState(false);
+  const [pesanError, setPesanError]       = useState<string | null>(null);
+
+  // Upload gambar
+  const [gambarFile, setGambarFile]   = useState<File | null>(null);
+  const [gambarPreview, setGambarPreview] = useState<string | null>(null);
+  const gambarInputRef = useRef<HTMLInputElement>(null);
+
   const chatEndRef = useRef<HTMLDivElement>(null);
   const scrollRef  = useRef<HTMLDivElement>(null);
 
@@ -92,18 +103,63 @@ export default function PengaduanMasukContent({ onMenuClick }: Props) {
     scrollRef.current?.scrollTo(0, 0);
   }, [selected]);
 
+  // Cleanup object URL preview
+  useEffect(() => {
+    return () => {
+      if (gambarPreview) URL.revokeObjectURL(gambarPreview);
+    };
+  }, [gambarPreview]);
+
+  function handlePilihGambar(file: File | null) {
+    if (!file) return;
+    setPesanError(null);
+
+    if (!ALLOWED_GAMBAR_TYPES.includes(file.type)) {
+      setPesanError("Tipe gambar tidak didukung. Gunakan JPG, PNG, WEBP, atau GIF.");
+      return;
+    }
+    if (file.size > MAX_GAMBAR_SIZE) {
+      setPesanError("Ukuran gambar maksimal 10MB.");
+      return;
+    }
+
+    if (gambarPreview) URL.revokeObjectURL(gambarPreview);
+    setGambarFile(file);
+    setGambarPreview(URL.createObjectURL(file));
+  }
+
+  function handleHapusGambar() {
+    if (gambarPreview) URL.revokeObjectURL(gambarPreview);
+    setGambarFile(null);
+    setGambarPreview(null);
+    if (gambarInputRef.current) gambarInputRef.current.value = "";
+  }
+
   async function handleKirimPesan() {
-    if (!pesanBaru.trim() || !selected) return;
+    if (!selected) return;
+    if (!pesanBaru.trim() && !gambarFile) return;
+
     setLoadingPesan(true);
+    setPesanError(null);
     try {
-      await fetch("/api/pengaduan/pesan", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pengaduanId: selected.id, pesan: pesanBaru }),
-      });
+      const formData = new FormData();
+      formData.append("pengaduanId", selected.id);
+      formData.append("pesan", pesanBaru.trim());
+      if (gambarFile) formData.append("gambar", gambarFile);
+
+      const res  = await fetch("/api/pengaduan/pesan", { method: "POST", body: formData });
+      const json = await res.json();
+
+      if (!res.ok) { setPesanError(json.error ?? "Gagal mengirim pesan"); return; }
+
       setPesanBaru("");
+      handleHapusGambar();
       await fetchPengaduan();
-    } finally { setLoadingPesan(false); }
+    } catch {
+      setPesanError("Gagal terhubung ke server");
+    } finally {
+      setLoadingPesan(false);
+    }
   }
 
   const filtered = pengaduanList.filter((p) => {
@@ -176,9 +232,21 @@ export default function PengaduanMasukContent({ onMenuClick }: Props) {
                     {isBK ? "BK" : getInitials(selected.walas.nama)}
                   </div>
                   <div className={`max-w-[75%] flex flex-col gap-1 ${isBK ? "items-end" : "items-start"}`}>
-                    <div className={`px-4 py-2.5 rounded-2xl text-[13.5px] leading-relaxed ${isBK ? "bg-[#111410] text-white rounded-tr-sm" : "bg-white text-[#1a1a1a] rounded-tl-sm shadow-sm"}`}>
-                      {msg.pesan}
-                    </div>
+                    {msg.gambar && (
+                      <a href={msg.gambar} target="_blank" rel="noopener noreferrer" className="block">
+                        <img
+                          src={msg.gambar}
+                          alt="Lampiran pesan"
+                          className="max-w-[240px] sm:max-w-[300px] rounded-2xl border border-black/5 object-cover"
+                          style={{ borderRadius: isBK ? "16px 16px 4px 16px" : "16px 16px 16px 4px" }}
+                        />
+                      </a>
+                    )}
+                    {msg.pesan && (
+                      <div className={`px-4 py-2.5 rounded-2xl text-[13.5px] leading-relaxed ${isBK ? "bg-[#111410] text-white rounded-tr-sm" : "bg-white text-[#1a1a1a] rounded-tl-sm shadow-sm"}`}>
+                        {msg.pesan}
+                      </div>
+                    )}
                     <span className="text-[11px] text-[#b0b0a8]">{formatWaktu(msg.createdAt)}</span>
                   </div>
                 </div>
@@ -187,9 +255,53 @@ export default function PengaduanMasukContent({ onMenuClick }: Props) {
             <div ref={chatEndRef} />
           </div>
 
+          {/* Error pesan/gambar */}
+          {pesanError && (
+            <div className="bg-red-50 border border-red-200 text-red-700 text-[12.5px] font-medium rounded-xl px-4 py-2.5">
+              {pesanError}
+            </div>
+          )}
+
+          {/* Preview gambar terpilih */}
+          {gambarPreview && (
+            <div className="relative inline-flex w-fit">
+              <img src={gambarPreview} alt="Preview" className="max-h-32 rounded-xl border border-black/10 object-cover" />
+              <button
+                type="button"
+                onClick={handleHapusGambar}
+                className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-[#111410] text-white flex items-center justify-center shadow-md hover:bg-red-500 transition"
+              >
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                  <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+              </button>
+            </div>
+          )}
+
           {/* Input pesan — hanya jika open */}
           {isOpen && (
             <div className="flex gap-2 items-end pb-4">
+              {/* Tombol upload gambar — di sebelah kiri */}
+              <input
+                ref={gambarInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                className="hidden"
+                onChange={(e) => handlePilihGambar(e.target.files?.[0] ?? null)}
+              />
+              <button
+                type="button"
+                onClick={() => gambarInputRef.current?.click()}
+                title="Tambah gambar"
+                className="w-11 h-11 rounded-xl bg-white border border-black/10 flex items-center justify-center text-[#9a9a9a] hover:text-[#4a9e2f] hover:border-[#7fe05b] transition shrink-0"
+              >
+                <svg width="19" height="19" viewBox="0 0 20 20" fill="none">
+                  <rect x="2" y="3" width="16" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" />
+                  <circle cx="7" cy="8" r="1.5" fill="currentColor" />
+                  <path d="M3 14l4-4 3 3 4-5 4 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+
               <textarea
                 rows={2}
                 value={pesanBaru}
@@ -201,7 +313,7 @@ export default function PengaduanMasukContent({ onMenuClick }: Props) {
               <button
                 type="button"
                 onClick={handleKirimPesan}
-                disabled={loadingPesan || !pesanBaru.trim()}
+                disabled={loadingPesan || (!pesanBaru.trim() && !gambarFile)}
                 className="w-11 h-11 rounded-xl bg-[#111410] flex items-center justify-center disabled:opacity-40 transition shrink-0"
               >
                 {loadingPesan ? (

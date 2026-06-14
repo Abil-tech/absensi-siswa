@@ -74,45 +74,47 @@ function toInputDate(date: Date) {
   return date.toISOString().split("T")[0];
 }
 
-// ── Download helpers ──────────────────────────────────────────
+interface RekapRow {
+  nama:    string;
+  kelas:   string;
+  jurusan: string;
+  hadir:   number;
+  sakit:   number;
+  izin:    number;
+  alfa:    number;
+}
 
-/** Unduh rekap satu kelas */
-function downloadKelasExcel(kelas: KelasData, tanggal: string) {
-  const rows = kelas.siswa.map((s, i) => ({
-    "No":          i + 1,
-    "NIS":         s.nis,
-    "Nama Siswa":  s.nama,
-    "Status":      STATUS_LABEL[s.status ?? "null"],
-    "Waktu Absen": s.waktu || "-",
+// ── Download helper — format Rekap ──────────────────────────────
+
+/** Unduh rekap absensi (Nama, Kelas, Jurusan, Hadir, Sakit, Izin, Alfa) */
+function downloadRekapExcel(rekap: RekapRow[], start: string, end: string) {
+  const rows = rekap.map((r) => ({
+    "Nama Siswa":   r.nama,
+    "Kelas":        r.kelas,
+    "Jurusan":      r.jurusan,
+    "Jumlah Hadir": r.hadir,
+    "Jumlah Sakit": r.sakit,
+    "Jumlah Ijin":  r.izin,
+    "Jumlah Alfa":  r.alfa,
   }));
 
   const ws = XLSX.utils.json_to_sheet(rows);
-  ws["!cols"] = [{ wch: 5 }, { wch: 14 }, { wch: 30 }, { wch: 14 }, { wch: 14 }];
+  ws["!cols"] = [
+    { wch: 28 }, // Nama Siswa
+    { wch: 12 }, // Kelas
+    { wch: 12 }, // Jurusan
+    { wch: 12 }, // Jumlah Hadir
+    { wch: 12 }, // Jumlah Sakit
+    { wch: 12 }, // Jumlah Ijin
+    { wch: 12 }, // Jumlah Alfa
+  ];
 
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, kelas.nama);
-  XLSX.writeFile(wb, `Absensi_${kelas.nama}_${formatTanggal(tanggal)}.xlsx`);
-}
+  XLSX.utils.book_append_sheet(wb, ws, "Rekap Absensi");
 
-/** Unduh rekap semua kelas — tiap kelas 1 sheet */
-function downloadSemuaKelasExcel(kelasList: KelasData[], tanggal: string) {
-  const wb = XLSX.utils.book_new();
-
-  kelasList.forEach((kelas) => {
-    const rows = kelas.siswa.map((s, i) => ({
-      "No":          i + 1,
-      "NIS":         s.nis,
-      "Nama Siswa":  s.nama,
-      "Status":      STATUS_LABEL[s.status ?? "null"],
-      "Waktu Absen": s.waktu || "-",
-    }));
-    const ws = XLSX.utils.json_to_sheet(rows);
-    ws["!cols"] = [{ wch: 5 }, { wch: 14 }, { wch: 30 }, { wch: 14 }, { wch: 14 }];
-    // nama sheet maks 31 karakter
-    XLSX.utils.book_append_sheet(wb, ws, kelas.nama.slice(0, 31));
-  });
-
-  XLSX.writeFile(wb, `Rekap_Absensi_${formatTanggal(tanggal)}.xlsx`);
+  const startLabel = formatTanggal(start);
+  const endLabel   = formatTanggal(end);
+  XLSX.writeFile(wb, `Rekap_Absensi_${startLabel}_-_${endLabel}.xlsx`);
 }
 
 /** Unduh detail 1 siswa dari modal */
@@ -151,6 +153,13 @@ export default function BkDashboardContent({ onMenuClick }: Props) {
   const [approvingId,     setApprovingId]     = useState<string | null>(null);
   const [approveError,    setApproveError]    = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Rekap (unduh Excel berdasarkan rentang tanggal)
+  const [showRekapPicker, setShowRekapPicker] = useState(false);
+  const [rekapStart, setRekapStart] = useState(toInputDate(new Date()));
+  const [rekapEnd,   setRekapEnd]   = useState(toInputDate(new Date()));
+  const [loadingRekap, setLoadingRekap] = useState(false);
+  const [rekapError,   setRekapError]   = useState<string | null>(null);
 
   // Modal
   const [modalOpen,     setModalOpen]     = useState(false);
@@ -227,6 +236,26 @@ export default function BkDashboardContent({ onMenuClick }: Props) {
     finally  { setApprovingId(null); }
   }
 
+  async function handleDownloadRekap() {
+    if (rekapStart > rekapEnd) {
+      setRekapError("Tanggal mulai tidak boleh lebih besar dari tanggal akhir");
+      return;
+    }
+    setLoadingRekap(true);
+    setRekapError(null);
+    try {
+      const res  = await fetch(`/api/bk/rekap?start=${rekapStart}&end=${rekapEnd}`);
+      const json = await res.json();
+      if (!res.ok) { setRekapError(json.error ?? "Gagal mengambil rekap"); return; }
+      downloadRekapExcel(json.rekap ?? [], rekapStart, rekapEnd);
+      setShowRekapPicker(false);
+    } catch {
+      setRekapError("Gagal terhubung ke server");
+    } finally {
+      setLoadingRekap(false);
+    }
+  }
+
   const totalSiswa      = kelasList.reduce((a, k) => a + k.total, 0);
   const totalHadir      = kelasList.reduce((a, k) => a + k.hadir, 0);
   const totalTerlambat  = kelasList.reduce((a, k) => a + k.terlambat, 0);
@@ -281,25 +310,53 @@ export default function BkDashboardContent({ onMenuClick }: Props) {
           )}
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          {/* Unduh semua kelas — hanya di view semua kelas */}
-          {!selectedKelas && !loading && kelasList.length > 0 && (
-            <BtnDownload
-              onClick={() => downloadSemuaKelasExcel(kelasList, tanggal)}
-              label="Unduh Semua"
-            />
-          )}
-          {/* Unduh kelas terpilih */}
-          {selectedKelas && (
-            <BtnDownload
-              onClick={() => downloadKelasExcel(selectedKelas, tanggal)}
-              label="Unduh Excel"
-            />
-          )}
-          {/* Filter tanggal */}
+        <div className="flex items-center gap-2 shrink-0 relative">
+          {/* Unduh Rekap (format: Nama, Kelas, Jurusan, Hadir, Sakit, Ijin, Alfa) */}
+          <BtnDownload
+            onClick={() => setShowRekapPicker((v) => !v)}
+            label="Unduh Rekap"
+          />
+
+          {/* Filter tanggal harian */}
           <input type="date" value={tanggal} max={toInputDate(new Date())}
             onChange={(e) => setTanggal(e.target.value)}
             className="border border-black/10 rounded-xl px-3 py-1.5 text-[13px] text-[#374151] bg-white outline-none focus:border-[#7fe05b] transition cursor-pointer" />
+
+          {/* Popover: pilih rentang tanggal rekap */}
+          {showRekapPicker && (
+            <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.12)] border border-black/5 p-4 z-20 flex flex-col gap-3">
+              <p className="text-[12px] font-extrabold text-[#1a1a1a]">Pilih Rentang Tanggal</p>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[10.5px] font-bold text-[#9a9a9a] uppercase tracking-wide">Dari</label>
+                <input type="date" value={rekapStart} max={rekapEnd}
+                  onChange={(e) => setRekapStart(e.target.value)}
+                  className="border border-black/10 rounded-xl px-3 py-2 text-[13px] text-[#374151] bg-[#f9f9f5] outline-none focus:border-[#7fe05b] transition" />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[10.5px] font-bold text-[#9a9a9a] uppercase tracking-wide">Sampai</label>
+                <input type="date" value={rekapEnd} min={rekapStart} max={toInputDate(new Date())}
+                  onChange={(e) => setRekapEnd(e.target.value)}
+                  className="border border-black/10 rounded-xl px-3 py-2 text-[13px] text-[#374151] bg-[#f9f9f5] outline-none focus:border-[#7fe05b] transition" />
+              </div>
+
+              {rekapError && (
+                <p className="text-[11.5px] text-red-600 font-semibold">{rekapError}</p>
+              )}
+
+              <div className="flex gap-2 pt-1">
+                <button type="button" onClick={() => setShowRekapPicker(false)}
+                  className="flex-1 py-2 rounded-xl border-2 border-[#e8e8e0] text-[#6b6b6b] text-[12.5px] font-bold hover:bg-[#f0f0ea] transition">
+                  Batal
+                </button>
+                <button type="button" onClick={handleDownloadRekap} disabled={loadingRekap}
+                  className="flex-1 py-2 rounded-xl bg-[#111410] hover:bg-[#1e1e16] text-[#7fe05b] text-[12.5px] font-extrabold transition disabled:opacity-50">
+                  {loadingRekap ? "Memuat..." : "Unduh"}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </header>
 

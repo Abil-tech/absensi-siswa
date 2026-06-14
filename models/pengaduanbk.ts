@@ -6,6 +6,7 @@ export type RolePesan = "walas" | "bk";
 export interface IPesan {
   role: RolePesan;
   pesan: string;
+  gambar?: string;
   createdAt: Date;
 }
 
@@ -34,49 +35,22 @@ export interface IPengaduanBK extends Document {
 
 const PesanSchema = new mongoose.Schema<IPesan>(
   {
-    role:  { type: String, enum: ["walas", "bk"], required: true },
-    pesan: { type: String, required: true, trim: true },
+    role:   { type: String, enum: ["walas", "bk"], required: true },
+    pesan:  { type: String, default: "", trim: true },
+    gambar: { type: String },
   },
   { timestamps: { createdAt: true, updatedAt: false } }
 );
 
 const PengaduanBKSchema = new mongoose.Schema<IPengaduanBK>(
   {
-    walas: {
-      type: Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-    siswa: {
-      type: Schema.Types.ObjectId,
-      ref: "Siswa",
-      required: true,
-    },
-    kategori: {
-      type: String,
-      enum: KATEGORI_LIST,
-      required: true,
-    },
-    judul: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    file: {
-      type: String,
-      required: true,
-    },
-    status: {
-      type: String,
-      enum: ["open", "selesai", "ditutup"],
-      default: "open",
-    },
-    tidakSelesaiCount: {
-      type: Number,
-      default: 0,
-      min: 0,
-      max: 3,
-    },
+    walas: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    siswa: { type: Schema.Types.ObjectId, ref: "Siswa", required: true },
+    kategori: { type: String, enum: KATEGORI_LIST, required: true },
+    judul: { type: String, required: true, trim: true },
+    file: { type: String, required: true },
+    status: { type: String, enum: ["open", "selesai", "ditutup"], default: "open" },
+    tidakSelesaiCount: { type: Number, default: 0, min: 0, max: 3 },
     messages: [PesanSchema],
   },
   { timestamps: true }

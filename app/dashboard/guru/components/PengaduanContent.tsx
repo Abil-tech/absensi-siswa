@@ -20,6 +20,7 @@ interface Pesan {
   role: "walas" | "bk";
   pesan: string;
   createdAt: string;
+  file?: string | null;
 }
 
 interface PengaduanData {
@@ -67,6 +68,11 @@ function formatTanggal(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" });
 }
 
+/** Deteksi apakah URL lampiran adalah gambar (Cloudinary atau ekstensi umum) */
+function isImageFile(url: string): boolean {
+  return /\.(jpg|jpeg|png|webp|gif)$/i.test(url) || url.includes("/image/upload/");
+}
+
 const STATUS_LABEL: Record<StatusPengaduan, string> = {
   open:     "Berlangsung",
   selesai:  "Selesai",
@@ -109,6 +115,8 @@ export default function PengaduanContent({ onMenuClick }: Props) {
   const [sendingPesan, setSendingPesan]     = useState(false);
   const [chatError, setChatError]           = useState<string | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [lampiranError, setLampiranError]   = useState(false);
+  const [pesanFileError, setPesanFileError] = useState<Set<number>>(new Set());
   const messagesEndRef                      = useRef<HTMLDivElement>(null);
 
   const userName = session?.user?.name ?? "Walas";
@@ -183,6 +191,12 @@ export default function PengaduanContent({ onMenuClick }: Props) {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [activePengaduan?.messages]);
+
+  // ── Reset status error gambar saat pindah pengaduan ──
+  useEffect(() => {
+    setLampiranError(false);
+    setPesanFileError(new Set());
+  }, [activePengaduan?.id]);
 
   // ── Polling setiap 5 detik saat di chat view ──
   useEffect(() => {
@@ -357,20 +371,59 @@ export default function PengaduanContent({ onMenuClick }: Props) {
 
         <main className="flex-1 px-4 sm:px-6 lg:px-8 py-5 flex flex-col gap-4 max-w-2xl mx-auto w-full">
           {/* Info pengaduan */}
-          <div className="bg-white rounded-2xl p-4 shadow-[0_2px_12px_rgba(0,0,0,0.05)]">
-            <div className="flex items-center gap-1.5 mb-1">
-              <span className="text-sm">{KATEGORI_OPTIONS.find((k) => k.value === activePengaduan.kategori)?.icon}</span>
-              <span className="text-[12px] font-bold text-[#7fe05b]">{activePengaduan.kategori}</span>
-            </div>
-            <p className="text-[14px] font-extrabold text-[#111410]">{activePengaduan.judul}</p>
-            <p className="text-[12px] text-[#9a9a9a] mt-1">
-              {activePengaduan.siswa.nama} · {activePengaduan.siswa.nis} · {formatTanggal(activePengaduan.createdAt)}
-            </p>
-            {activePengaduan.tidakSelesaiCount > 0 && (
-              <p className="text-[11.5px] text-amber-600 mt-1.5 font-semibold">
-                Tidak selesai: {activePengaduan.tidakSelesaiCount}/3
-                {activePengaduan.tidakSelesaiCount >= 3 && " — Kasus ditutup otomatis"}
+          <div className="bg-white rounded-2xl p-4 shadow-[0_2px_12px_rgba(0,0,0,0.05)] flex flex-col gap-3">
+            <div>
+              <div className="flex items-center gap-1.5 mb-1">
+                <span className="text-sm">{KATEGORI_OPTIONS.find((k) => k.value === activePengaduan.kategori)?.icon}</span>
+                <span className="text-[12px] font-bold text-[#7fe05b]">{activePengaduan.kategori}</span>
+              </div>
+              <p className="text-[14px] font-extrabold text-[#111410]">{activePengaduan.judul}</p>
+              <p className="text-[12px] text-[#9a9a9a] mt-1">
+                {activePengaduan.siswa.nama} · {activePengaduan.siswa.nis} · {formatTanggal(activePengaduan.createdAt)}
               </p>
+              {activePengaduan.tidakSelesaiCount > 0 && (
+                <p className="text-[11.5px] text-amber-600 mt-1.5 font-semibold">
+                  Tidak selesai: {activePengaduan.tidakSelesaiCount}/3
+                  {activePengaduan.tidakSelesaiCount >= 3 && " — Kasus ditutup otomatis"}
+                </p>
+              )}
+            </div>
+
+            {/* ── Lampiran ── */}
+            {activePengaduan.file && (
+              <div className="pt-3 border-t border-black/5">
+                <p className="text-[11px] font-bold text-[#9a9a9a] uppercase tracking-wide mb-2">Lampiran</p>
+                {isImageFile(activePengaduan.file) && !lampiranError ? (
+                  <a href={activePengaduan.file} target="_blank" rel="noopener noreferrer" className="inline-block">
+                    <img
+                      src={activePengaduan.file}
+                      alt="Lampiran pengaduan"
+                      onError={() => setLampiranError(true)}
+                      className="w-full max-w-xs h-auto rounded-xl border border-black/10 object-cover max-h-56"
+                    />
+                  </a>
+                ) : (
+                  <div className="flex flex-col gap-1.5">
+                    <a
+                      href={activePengaduan.file}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 px-4 py-3 bg-[#f0f0ea] rounded-xl hover:bg-[#e8e8e0] transition-colors w-fit"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        <polyline points="13 2 13 9 20 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      <span className="text-[13px] font-semibold text-[#6b6b6b]">
+                        {lampiranError ? "Buka Lampiran (gambar gagal dimuat)" : "Buka Dokumen"}
+                      </span>
+                    </a>
+                    {lampiranError && (
+                      <p className="text-[11px] text-[#b0b0a8] break-all">{activePengaduan.file}</p>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
@@ -378,19 +431,79 @@ export default function PengaduanContent({ onMenuClick }: Props) {
           <div className="flex flex-col gap-3 flex-1">
             {activePengaduan.messages.map((msg, i) => {
               const isWalas = msg.role === "walas";
+
+              // Cek beberapa kemungkinan nama field untuk lampiran per-pesan
+              const msgAny  = msg as unknown as Record<string, unknown>;
+              const fileUrl = (
+                msg.file ?? msgAny.lampiran ?? msgAny.attachment ?? msgAny.image ?? msgAny.foto
+              ) as string | null | undefined;
+
+              const hasText = !!(
+                msg.pesan || msgAny.isi || msgAny.text || msgAny.message
+              );
+
               return (
                 <div key={i} className={`flex ${isWalas ? "justify-end" : "justify-start"}`}>
                   <div className={`max-w-[80%] flex flex-col gap-1 ${isWalas ? "items-end" : "items-start"}`}>
                     <span className="text-[11px] font-semibold text-[#9a9a9a] px-1">
                       {isWalas ? userName : "Guru BK"} · {formatWaktu(msg.createdAt)}
                     </span>
-                    <div className={`px-4 py-3 rounded-2xl text-[13.5px] leading-relaxed ${
-                      isWalas
-                        ? "bg-[#111410] text-white rounded-tr-sm"
-                        : "bg-white text-[#1a1a1a] rounded-tl-sm shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
-                    }`}>
-                      {msg.pesan}
-                    </div>
+
+                    {/* Bubble teks — hanya render jika ada teks */}
+                    {hasText && (
+                      <div className={`px-4 py-3 rounded-2xl text-[13.5px] leading-relaxed ${
+                        isWalas
+                          ? "bg-[#111410] text-white rounded-tr-sm"
+                          : "bg-white text-[#1a1a1a] rounded-tl-sm shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
+                      }`}>
+                        {msg.pesan
+                          || (msgAny.isi as string)
+                          || (msgAny.text as string)
+                          || (msgAny.message as string)}
+                      </div>
+                    )}
+
+                    {/* Lampiran gambar/file per-pesan */}
+                    {fileUrl && (
+                      isImageFile(fileUrl) && !pesanFileError.has(i) ? (
+                        <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="inline-block">
+                          <img
+                            src={fileUrl}
+                            alt="Lampiran pesan"
+                            onError={() => setPesanFileError((prev) => new Set(prev).add(i))}
+                            className="w-full max-w-[220px] h-auto rounded-xl border border-black/10 object-cover max-h-48"
+                          />
+                        </a>
+                      ) : (
+                        <a
+                          href={fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={`flex items-center gap-2 px-3 py-2.5 rounded-xl transition-colors ${
+                            isWalas ? "bg-white/10 hover:bg-white/15 text-white" : "bg-[#f0f0ea] hover:bg-[#e8e8e0] text-[#6b6b6b]"
+                          }`}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                            <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                            <polyline points="13 2 13 9 20 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                          <span className="text-[12.5px] font-semibold">
+                            {pesanFileError.has(i) ? "Lampiran (gagal dimuat)" : "Buka Lampiran"}
+                          </span>
+                        </a>
+                      )
+                    )}
+
+                    {/* Jika tidak ada teks maupun file — tampilkan placeholder */}
+                    {!hasText && !fileUrl && (
+                      <div className={`px-4 py-3 rounded-2xl text-[13.5px] italic text-[#b0b0a8] ${
+                        isWalas
+                          ? "bg-[#111410] rounded-tr-sm"
+                          : "bg-white rounded-tl-sm shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
+                      }`}>
+                        (pesan kosong)
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -657,20 +770,30 @@ export default function PengaduanContent({ onMenuClick }: Props) {
                 onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
               />
               {file ? (
-                <div className="flex items-center gap-3 bg-[#f0fce8] border-2 border-[#7fe05b] rounded-xl px-4 py-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-bold text-[#1a1a1a] truncate">{file.name}</p>
-                    <p className="text-[11px] text-[#9a9a9a]">{(file.size / 1024).toFixed(0)} KB</p>
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-3 bg-[#f0fce8] border-2 border-[#7fe05b] rounded-xl px-4 py-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-bold text-[#1a1a1a] truncate">{file.name}</p>
+                      <p className="text-[11px] text-[#9a9a9a]">{(file.size / 1024).toFixed(0)} KB</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setFile(null); setPreview(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                      className="text-[#9a9a9a] hover:text-red-500 transition-colors shrink-0"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                      </svg>
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => { setFile(null); setPreview(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
-                    className="text-[#9a9a9a] hover:text-red-500 transition-colors shrink-0"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                    </svg>
-                  </button>
+                  {/* Preview gambar sebelum diupload */}
+                  {preview && (
+                    <img
+                      src={preview}
+                      alt="Preview lampiran"
+                      className="w-full max-w-xs h-auto rounded-xl border border-black/10 object-cover max-h-56"
+                    />
+                  )}
                 </div>
               ) : (
                 <button
